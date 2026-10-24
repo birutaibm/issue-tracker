@@ -1,21 +1,25 @@
 # Issue Tracker MCP Server
 
-A Model Context Protocol (MCP) server that provides file operations and database persistence for an issue tracker system. Allows AI agents to list files, read/write markdown files, and manage projects and cards through a SQLite database.
+A Model Context Protocol (MCP) server that provides database persistence for an issue tracker system. Allows AI agents to manage projects and cards through a SQLite database with associated markdown content.
 
 ## Features
 
-- **List files** - Browse directories and subdirectories in `~/issue-tracker`
-- **Read markdown** - Read content of `.md` files
-- **Write markdown** - Create or overwrite `.md` files
+- **Read card** - Get card data from the database together with its markdown content
+- **Create project** - Create new projects in the issue tracker
+- **Create card** - Create new cards within a project
+- **List projects** - List all projects
+- **List cards** - List all cards in a specific project
 - **Database persistence** - SQLite database with Knex.js for projects and cards
 
 ## Tools
 
 | Tool | Description |
 |------|-------------|
-| `list_files` | List files and directories (optional `path` parameter) |
-| `read_markdown` | Read a `.md` file (requires `path`) |
-| `write_markdown` | Create/overwrite a `.md` file (requires `path` and `content`) |
+| `read_card` | Get card data + markdown content (requires `card_id` or `card_path`) |
+| `create_project` | Create a new project (requires `title`) |
+| `create_card` | Create a new card in a project (requires `project_id`, `title`, `description`) |
+| `list_projects` | List all projects |
+| `list_cards` | List all cards in a project (requires `project_id`) |
 
 ## Database
 
@@ -83,7 +87,7 @@ Add to your OpenCode config (`~/.config/opencode/opencode.json`):
 }
 ```
 
-Then restart OpenCode. The tools will be available as `issue-tracker_*` (e.g., `issue-tracker_list_files`).
+Then restart OpenCode. The tools will be available as `issue-tracker_*` (e.g., `issue-tracker_read_card`).
 
 ## Development
 
