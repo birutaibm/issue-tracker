@@ -10,6 +10,7 @@ import { promises as fs } from "fs";
 import { join, resolve, relative } from "path";
 import { createProject, getProjectById, getProjectByPath, listProjects } from "./db/models/project.js";
 import { createCard, getCardById, getCardByPath, listCards, CardStatus } from "./db/models/card.js";
+import { createComment, getCommentsByCardId, CreateCommentInput, CommentWithContent } from "./db/models/comment.js";
 import { getKnex } from "./db/client.js";
 
 const BASE_DIR = resolve(process.env.HOME || "", "issue-tracker");
@@ -62,6 +63,28 @@ function validatePath(requestedPath: string): string {
 
 async function readCardFile(cardPath: string): Promise<string> {
   const fullPath = validatePath(cardPath);
+  const content = await fs.readFile(fullPath, "utf-8");
+  return content;
+}
+
+function getCommentsDir(cardPath: string): string {
+  return cardPath.replace(/\.md$/, "") + "/comments";
+}
+
+async function ensureCommentsDir(cardPath: string): Promise<string> {
+  const commentsDir = getCommentsDir(cardPath);
+  const fullPath = resolve(BASE_DIR, commentsDir);
+  await fs.mkdir(fullPath, { recursive: true });
+  return commentsDir;
+}
+
+async function writeCommentFile(commentPath: string, content: string): Promise<void> {
+  const fullPath = validatePath(commentPath);
+  await fs.writeFile(fullPath, content, "utf-8");
+}
+
+async function readCommentFile(commentPath: string): Promise<string> {
+  const fullPath = validatePath(commentPath);
   const content = await fs.readFile(fullPath, "utf-8");
   return content;
 }
@@ -165,6 +188,24 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           required: ["project_id"],
         },
       },
+      {
+        name: "add_comment",
+        description: "Add a comment to a card",
+        inputSchema: {
+          type: "object",
+          properties: {
+            card_id: {
+              type: "integer",
+              description: "ID of the card",
+            },
+            content: {
+              type: "string",
+              description: "Markdown content of the comment",
+            },
+          },
+          required: ["card_id", "content"],
+        },
+      },
     ],
   };
 });
@@ -193,8 +234,21 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         
         const content = await readCardFile(card.path);
         
+        // Fetch comments for this card
+        const comments = await getCommentsByCardId(card.id);
+        const commentsWithContent: CommentWithContent[] = [];
+        for (const comment of comments) {
+          const commentPath = join(getCommentsDir(card.path), `${comment.id}.md`);
+          try {
+            const commentContent = await readCommentFile(commentPath);
+            commentsWithContent.push({ ...comment, content: commentContent });
+          } catch {
+            // If comment file doesn't exist, skip it
+          }
+        }
+        
         return {
-          content: [{ type: "text", text: JSON.stringify({ ...card, content }, null, 2) }],
+          content: [{ type: "text", text: JSON.stringify({ ...card, content, comments: commentsWithContent }, null, 2) }],
         };
       }
       
@@ -292,6 +346,36 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         const cards = await listCards(projectId);
         return {
           content: [{ type: "text", text: JSON.stringify(cards, null, 2) }],
+        };
+      }
+      
+      case "add_comment": {
+        const cardId = args?.card_id as number;
+        const content = args?.content as string;
+        
+        if (!cardId || !content) {
+          throw new Error("card_id and content are required");
+        }
+        
+        const card = await getCardById(cardId);
+        if (!card) {
+          throw new Error(`Card with id ${cardId} not found`);
+        }
+        
+        const knex = getKnex();
+        const comment = await knex.transaction(async (trx) => {
+          const [c] = await trx("comments").insert({ card_id: cardId }).returning("*");
+          return c;
+        });
+        
+        const commentsDir = await ensureCommentsDir(card.path);
+        const commentPath = join(commentsDir, `${comment.id}.md`);
+        const fullCommentPath = resolve(BASE_DIR, commentPath);
+        
+        await fs.writeFile(fullCommentPath, content, "utf-8");
+        
+        return {
+          content: [{ type: "text", text: JSON.stringify({ ...comment, content }, null, 2) }],
         };
       }
       

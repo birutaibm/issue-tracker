@@ -4,22 +4,24 @@ A Model Context Protocol (MCP) server that provides database persistence for an 
 
 ## Features
 
-- **Read card** - Get card data from the database together with its markdown content
+- **Read card** - Get card data from the database together with its markdown content and comments
 - **Create project** - Create new projects in the issue tracker
 - **Create card** - Create new cards within a project
 - **List projects** - List all projects
 - **List cards** - List all cards in a specific project
-- **Database persistence** - SQLite database with Knex.js for projects and cards
+- **Add comment** - Add comments to cards (stored in database + markdown files)
+- **Database persistence** - SQLite database with Knex.js for projects, cards, and comments
 
 ## Tools
 
 | Tool | Description |
 |------|-------------|
-| `read_card` | Get card data + markdown content (requires `card_id` or `card_path`) |
+| `read_card` | Get card data + markdown content + comments (requires `card_id` or `card_path`) |
 | `create_project` | Create a new project (requires `title`) |
 | `create_card` | Create a new card in a project (requires `project_id`, `title`, `description`) |
 | `list_projects` | List all projects |
 | `list_cards` | List all cards in a project (requires `project_id`) |
+| `add_comment` | Add a comment to a card (requires `card_id`, `content`) |
 
 ## Database
 
@@ -47,10 +49,21 @@ The server includes a persistence layer using **Knex.js + SQLite**:
 | `created_at` | DATETIME | NOT NULL, DEFAULT CURRENT_TIMESTAMP |
 | `updated_at` | DATETIME | NOT NULL, DEFAULT CURRENT_TIMESTAMP |
 
+**`comments`**
+| Column | Type | Constraints |
+|--------|------|-------------|
+| `id` | INTEGER | PRIMARY KEY, AUTOINCREMENT |
+| `card_id` | INTEGER | NOT NULL, FOREIGN KEY REFERENCES cards(id) ON DELETE CASCADE |
+| `created_at` | DATETIME | NOT NULL, DEFAULT CURRENT_TIMESTAMP |
+| `updated_at` | DATETIME | NOT NULL, DEFAULT CURRENT_TIMESTAMP |
+
+**Note**: Comment content is NOT stored in the database. It is stored as markdown files in `projects/{project-slug}/cards/{card-slug}/comments/{comment-id}.md`
+
 ### Models
 
 - **Project** (`src/db/models/project.ts`) - CRUD: `createProject`, `getProjectById`, `getProjectByPath`, `listProjects`, `updateProject`, `deleteProject`
 - **Card** (`src/db/models/card.ts`) - CRUD: `createCard`, `getCardById`, `getCardByPath`, `listCards`, `updateCard`, `deleteCard`
+- **Comment** (`src/db/models/comment.ts`) - CRUD: `createComment`, `getCommentsByCardId`
 
 ### Database Location
 
@@ -120,10 +133,12 @@ issue-tracker-mcp/
 │       ├── index.ts          # Database exports
 │       ├── migrations/       # Database migrations
 │       │   ├── 20261024000001_create_projects.ts
-│       │   └── 20261024000002_create_cards.ts
+│       │   ├── 20261024000002_create_cards.ts
+│       │   └── 20261024000003_create_comments.ts
 │       └── models/
 │           ├── project.ts    # Project CRUD operations
-│           └── card.ts       # Card CRUD operations
+│           ├── card.ts       # Card CRUD operations
+│           └── comment.ts    # Comment CRUD operations
 ├── dist/                     # Compiled output (gitignored)
 ├── knexfile.ts              # Knex CLI configuration
 ├── package.json
@@ -138,6 +153,13 @@ The MCP operates on `~/issue-tracker/` which contains:
 - `projects/` - Project directories with cards
 - `cards/` - Individual issue cards as markdown files
 - `.data/` - SQLite database (`database.sqlite`)
+
+### Comments File Structure
+
+Comments are stored as markdown files in:
+```
+projects/{project-slug}/cards/{card-slug}/comments/{comment-id}.md
+```
 
 ## License
 
