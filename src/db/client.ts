@@ -1,5 +1,5 @@
-import Knex, { Knex as KnexType } from "knex";
-import { knexConfig } from "./config.js";
+import Knex, { Knex as KnexType } from 'knex';
+import { knexConfig } from './config.js';
 
 let knexInstance: KnexType | null = null;
 

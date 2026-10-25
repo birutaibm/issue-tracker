@@ -4,9 +4,9 @@ import cardCreator from './CardCreator.js';
 import projectLister from './ProjectLister.js';
 import cardLister from './CardLister.js';
 import commentAdder from './CommentAdder.js';
-import { z } from "zod";
+import { z } from 'zod';
 
-type ZodSchema = z.ZodRawShape | z.ZodObject<any>;
+type ZodSchema = z.ZodRawShape | z.ZodObject<z.ZodRawShape>;
 
 interface Tool {
   name: string;
@@ -15,7 +15,7 @@ interface Tool {
     inputSchema: ZodSchema;
   };
   execute(args: Record<string, unknown> | undefined): Promise<{
-    content: Array<{ type: "text"; text: string }>;
+    content: Array<{ type: 'text'; text: string }>;
     isError?: boolean;
   }>;
 }
@@ -37,7 +37,7 @@ export function getTool(name: string): Tool {
       schema: { description: '', inputSchema: z.object({}) },
       execute() {
         throw new Error(`Unknown tool: ${name}`);
-      }
+      },
     };
   }
 

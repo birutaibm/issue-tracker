@@ -1,15 +1,18 @@
-import { getCardById, getCardByPath } from "../db/index.js";
-import { getCommentsByCardId, CommentWithContent } from "../db/models/comment.js";
-import { readCardFile, mountCommentPath, readCommentFile } from "../services/FileSystem.js";
-import { z } from "zod";
+import { getCardById, getCardByPath } from '../db/index.js';
+import { getCommentsByCardId, CommentWithContent } from '../db/models/comment.js';
+import { readCardFile, mountCommentPath, readCommentFile } from '../services/FileSystem.js';
+import { z } from 'zod';
 
-const name = "read_card";
+const name = 'read_card';
 
 const schema = {
-  description: "Get card data from the database together with its content from the markdown file",
+  description: 'Get card data from the database together with its content from the markdown file',
   inputSchema: {
-    card_id: z.number().optional().describe("ID of the card"),
-    card_path: z.string().optional().describe("Relative path to the card's markdown file from issue-tracker root"),
+    card_id: z.number().optional().describe('ID of the card'),
+    card_path: z
+      .string()
+      .optional()
+      .describe("Relative path to the card's markdown file from issue-tracker root"),
   },
 };
 
@@ -23,11 +26,11 @@ async function execute(args: Record<string, unknown> | undefined) {
   } else if (cardPath !== undefined) {
     card = await getCardByPath(cardPath);
   } else {
-    throw new Error("Either card_id or card_path is required");
+    throw new Error('Either card_id or card_path is required');
   }
 
   if (!card) {
-    throw new Error("Card not found");
+    throw new Error('Card not found');
   }
 
   const content = await readCardFile(card.path);
@@ -46,12 +49,17 @@ async function execute(args: Record<string, unknown> | undefined) {
   }
 
   return {
-    content: [{ type: "text" as const, text: JSON.stringify({ ...card, content, comments: commentsWithContent }, null, 2) }],
+    content: [
+      {
+        type: 'text' as const,
+        text: JSON.stringify({ ...card, content, comments: commentsWithContent }, null, 2),
+      },
+    ],
   };
 }
 
 export default {
   name,
   schema,
-  execute
+  execute,
 };

@@ -1,4 +1,4 @@
-import { getKnex } from "../client.js";
+import { getKnex } from '../client.js';
 
 export interface Comment {
   id: number;
@@ -18,12 +18,12 @@ export interface CommentWithContent extends Comment {
 
 export async function createComment(input: CreateCommentInput): Promise<Comment> {
   const knex = getKnex();
-  const { content, ...dbInput } = input;
-  const [comment] = await knex("comments").insert(dbInput).returning("*");
+  const { content: _content, ...dbInput } = input;
+  const [comment] = await knex('comments').insert(dbInput).returning('*');
   return comment;
 }
 
 export async function getCommentsByCardId(cardId: number): Promise<Comment[]> {
   const knex = getKnex();
-  return knex("comments").where({ card_id: cardId }).orderBy("created_at", "asc");
+  return knex('comments').where({ card_id: cardId }).orderBy('created_at', 'asc');
 }

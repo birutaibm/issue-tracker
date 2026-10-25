@@ -119,6 +119,18 @@ npx knex migrate:latest --knexfile knexfile.ts
 
 # Check migration status
 npx knex migrate:status --knexfile knexfile.ts
+
+# Lint code
+npm run lint
+
+# Fix lint errors automatically
+npm run lint:fix
+
+# Format code with Prettier
+npm run format
+
+# Check code formatting
+npm run format:check
 ```
 
 ## Project Structure

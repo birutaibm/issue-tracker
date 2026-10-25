@@ -1,12 +1,12 @@
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { ensureBaseDir } from "./services/FileSystem.js";
-import { getTool, listTools } from "./tools/index.js";
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { ensureBaseDir } from './services/FileSystem.js';
+import { getTool, listTools } from './tools/index.js';
 
 const server = new McpServer(
   {
-    name: "issue-tracker-mcp",
-    version: "1.0.0",
+    name: 'issue-tracker-mcp',
+    version: '1.0.0',
   },
   {
     capabilities: {
@@ -27,10 +27,10 @@ async function main() {
 
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error("Issue Tracker MCP server running on stdio");
+  console.error('Issue Tracker MCP server running on stdio');
 }
 
 main().catch((error) => {
-  console.error("Server error:", error);
+  console.error('Server error:', error);
   process.exit(1);
 });
