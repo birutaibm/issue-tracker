@@ -127,6 +127,16 @@ npx knex migrate:status --knexfile knexfile.ts
 issue-tracker-mcp/
 ├── src/
 │   ├── index.ts              # MCP server implementation
+│   ├── tools/                # Tool implementations
+│   │   ├── CardReader.ts     # Read card tool
+│   │   ├── CardCreator.ts    # Create card tool
+│   │   ├── CardLister.ts     # List cards tool
+│   │   ├── ProjectCreator.ts # Create project tool
+│   │   ├── ProjectLister.ts  # List projects tool
+│   │   ├── CommentAdder.ts   # Add comment tool
+│   │   └── index.ts          # Tool registry
+│   ├── services/
+│   │   └── FileSystem.ts     # File system operations
 │   └── db/
 │       ├── config.ts         # Knex configuration
 │       ├── client.ts         # Knex singleton instance
