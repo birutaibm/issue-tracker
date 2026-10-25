@@ -38,7 +38,7 @@ async function execute(args: Record<string, unknown> | undefined) {
 
   const baseSlug = generateSlug(title);
   const cardSlug = await ensureUniqueSlug(baseSlug, async (slug) => {
-    const existing = await getCardByPath(mountCardPath(project, `${slug}.md`));
+    const existing = await getCardByPath(mountCardPath(project, slug));
     return !!existing;
   });
 

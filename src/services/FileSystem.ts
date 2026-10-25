@@ -3,7 +3,28 @@ import { join, resolve, relative } from 'path';
 import { Card, Project } from '../db/index.js';
 import { Comment } from '../db/models/comment.js';
 
-export const BASE_DIR = resolve(process.env.HOME || '', 'issue-tracker');
+let baseDirOverride: string | null = null;
+
+export function getBaseDir(): string {
+  if (baseDirOverride) {
+    return baseDirOverride;
+  }
+  const home = process.env.HOME || '';
+  // If HOME already ends with 'issue-tracker', use it directly
+  // Otherwise, append 'issue-tracker' to HOME
+  if (home.endsWith('issue-tracker')) {
+    return home;
+  }
+  return resolve(home, 'issue-tracker');
+}
+
+export function setBaseDirForTesting(dir: string): void {
+  baseDirOverride = dir;
+}
+
+export function resetBaseDir(): void {
+  baseDirOverride = null;
+}
 
 export function generateSlug(title: string): string {
   return title
@@ -28,24 +49,27 @@ export async function ensureUniqueSlug(
 }
 
 export async function ensureBaseDir(): Promise<void> {
+  const baseDir = getBaseDir();
   try {
-    await fs.access(BASE_DIR);
+    await fs.access(baseDir);
   } catch {
-    await fs.mkdir(BASE_DIR, { recursive: true });
+    await fs.mkdir(baseDir, { recursive: true });
   }
 }
 
 export async function ensureProjectDirs(projectSlug: string): Promise<string> {
+  const baseDir = getBaseDir();
   const projectPath = join('projects', projectSlug);
-  const fullPath = resolve(BASE_DIR, projectPath);
+  const fullPath = resolve(baseDir, projectPath);
   await fs.mkdir(fullPath, { recursive: true });
   await fs.mkdir(join(fullPath, 'cards'), { recursive: true });
   return projectPath;
 }
 
 export function validatePath(requestedPath: string): string {
-  const fullPath = resolve(BASE_DIR, requestedPath);
-  const relativePath = relative(BASE_DIR, fullPath);
+  const baseDir = getBaseDir();
+  const fullPath = resolve(baseDir, requestedPath);
+  const relativePath = relative(baseDir, fullPath);
 
   if (relativePath.startsWith('..') || fullPath.startsWith('..')) {
     throw new Error('Access denied: path traversal not allowed');
@@ -65,8 +89,9 @@ export function getCommentsDir(cardPath: string): string {
 }
 
 export async function ensureCommentsDir(cardPath: string): Promise<string> {
+  const baseDir = getBaseDir();
   const commentsDir = getCommentsDir(cardPath);
-  const fullPath = resolve(BASE_DIR, commentsDir);
+  const fullPath = resolve(baseDir, commentsDir);
   await fs.mkdir(fullPath, { recursive: true });
   return commentsDir;
 }

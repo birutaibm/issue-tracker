@@ -44,6 +44,10 @@ export async function updateProject(
   input: UpdateProjectInput
 ): Promise<Project | undefined> {
   const knex = getKnex();
+  // If no fields to update, return the existing project
+  if (Object.keys(input).length === 0) {
+    return getProjectById(id);
+  }
   const [project] = await knex('projects').where({ id }).update(input).returning('*');
   return project;
 }

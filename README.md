@@ -131,6 +131,15 @@ npm run format
 
 # Check code formatting
 npm run format:check
+
+# Run tests
+npm test
+
+# Run tests in watch mode
+npm run test:watch
+
+# Run tests with coverage
+npm run test:coverage
 ```
 
 ## Project Structure
@@ -149,25 +158,39 @@ issue-tracker-mcp/
 │   │   └── index.ts          # Tool registry
 │   ├── services/
 │   │   └── FileSystem.ts     # File system operations
-│   └── db/
-│       ├── config.ts         # Knex configuration
-│       ├── client.ts         # Knex singleton instance
-│       ├── index.ts          # Database exports
-│       ├── migrations/       # Database migrations
-│       │   ├── 20261024000001_create_projects.ts
-│       │   ├── 20261024000002_create_cards.ts
-│       │   └── 20261024000003_create_comments.ts
-│       └── models/
-│           ├── project.ts    # Project CRUD operations
-│           ├── card.ts       # Card CRUD operations
-│           └── comment.ts    # Comment CRUD operations
+│   ├── db/
+│   │   ├── config.ts         # Knex configuration
+│   │   ├── client.ts         # Knex singleton instance
+│   │   ├── index.ts          # Database exports
+│   │   ├── migrations/       # Database migrations
+│   │   │   ├── 20261024000001_create_projects.ts
+│   │   │   ├── 20261024000002_create_cards.ts
+│   │   │   └── 20261024000003_create_comments.ts
+│   │   └── models/
+│   │       ├── project.ts    # Project CRUD operations
+│   │       ├── card.ts       # Card CRUD operations
+│   │       └── comment.ts    # Comment CRUD operations
+│   └── __tests__/            # Test utilities and setup
+│       ├── test-utils.ts     # Test environment setup
+│       └── test-db.ts        # Test database helpers
 ├── dist/                     # Compiled output (gitignored)
 ├── knexfile.ts              # Knex CLI configuration
 ├── package.json
 ├── tsconfig.json
+├── jest.config.mjs          # Jest configuration
 ├── .gitignore
 └── README.md
 ```
+
+## Testing
+
+The project includes comprehensive automated tests using **Jest** with **ts-jest**:
+
+- **116 tests** covering all models, tools, and services
+- **87%+ code coverage** (statements, branches, functions, lines)
+- **In-memory SQLite** for fast, isolated test execution
+- Run `npm test` to execute all tests
+- Run `npm run test:coverage` for detailed coverage report
 
 ## Data Directory
 

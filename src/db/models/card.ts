@@ -53,6 +53,10 @@ export async function listCards(projectId?: number): Promise<Card[]> {
 
 export async function updateCard(id: number, input: UpdateCardInput): Promise<Card | undefined> {
   const knex = getKnex();
+  // If no fields to update, return the existing card
+  if (Object.keys(input).length === 0) {
+    return getCardById(id);
+  }
   const [card] = await knex('cards').where({ id }).update(input).returning('*');
   return card;
 }

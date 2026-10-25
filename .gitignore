@@ -37,3 +37,4 @@ coverage/
 # Misc
 *.tgz
 .cache/
+file::memory:?cache=shared
