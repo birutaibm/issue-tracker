@@ -31,6 +31,14 @@ pnpm-debug.log*
 # Test coverage
 coverage/
 
+# Playwright
+playwright-report/
+test-results/
+
+# TypeScript/Vite build artifacts in source dirs
+*.js.map
+*.d.ts.map
+
 # Opencode
 .opencode/
 

@@ -2,6 +2,8 @@
 
 A Model Context Protocol (MCP) server that provides database persistence for an issue tracker system. Allows AI agents to manage projects and cards through a SQLite database with associated markdown content.
 
+Now includes an **Express HTTP server + Vue 3 frontend** for web-based access to the same data.
+
 ## Features
 
 - **Read card** - Get card data from the database together with its markdown content and comments
@@ -11,8 +13,11 @@ A Model Context Protocol (MCP) server that provides database persistence for an 
 - **List cards** - List all cards in a specific project
 - **Add comment** - Add comments to cards (stored in database + markdown files)
 - **Database persistence** - SQLite database with Knex.js for projects, cards, and comments
+- **HTTP API** - RESTful API for all CRUD operations
+- **Vue 3 Frontend** - Web interface for managing projects, cards, and comments
+- **Advanced Markdown** - Syntax highlighting (Shiki), code blocks, image serving
 
-## Tools
+## Tools (MCP)
 
 | Tool | Description |
 |------|-------------|
@@ -22,6 +27,22 @@ A Model Context Protocol (MCP) server that provides database persistence for an 
 | `list_projects` | List all projects |
 | `list_cards` | List all cards in a project (requires `project_id`) |
 | `add_comment` | Add a comment to a card (requires `card_id`, `content`) |
+
+## HTTP API
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/projects` | List all projects |
+| POST | `/api/projects` | Create project |
+| GET | `/api/projects/:id` | Get project with card summary |
+| GET | `/api/projects/:id/cards` | List cards in project |
+| POST | `/api/projects/:id/cards` | Create card |
+| GET | `/api/cards/:id` | Get card with content + comments |
+| PATCH | `/api/cards/:id` | Update card (title, status, content) |
+| DELETE | `/api/cards/:id` | Delete card |
+| GET | `/api/cards/:id/comments` | List comments |
+| POST | `/api/cards/:id/comments` | Add comment |
+| GET | `/api/projects/:projectSlug/assets/:cardSlug/:filename` | Serve image/file |
 
 ## Database
 
@@ -102,10 +123,27 @@ Add to your OpenCode config (`~/.config/opencode/opencode.json`):
 
 Then restart OpenCode. The tools will be available as `issue-tracker_*` (e.g., `issue-tracker_read_card`).
 
+## HTTP Server + Frontend
+
+The server runs both MCP (stdio) and HTTP (port 3000) in the same process:
+
+```bash
+# Development (both servers with hot reload)
+npm run dev
+
+# Production build
+npm run build
+
+# Run production (serves both MCP and HTTP)
+npm start
+```
+
+The Vue frontend will be available at `http://localhost:3000` (serves static files from `dist/client/`).
+
 ## Development
 
 ```bash
-# Run in development mode (with tsx)
+# Run in development mode (both MCP + Express + Vite)
 npm run dev
 
 # Build for production
@@ -132,7 +170,7 @@ npm run format
 # Check code formatting
 npm run format:check
 
-# Run tests
+# Run unit/integration tests
 npm test
 
 # Run tests in watch mode
@@ -140,6 +178,10 @@ npm run test:watch
 
 # Run tests with coverage
 npm run test:coverage
+
+# Run E2E tests (requires running server)
+npm run start &
+npx playwright test
 ```
 
 ## Project Structure
@@ -147,8 +189,20 @@ npm run test:coverage
 ```
 issue-tracker-mcp/
 ├── src/
-│   ├── index.ts              # MCP server implementation
-│   ├── tools/                # Tool implementations
+│   ├── index.ts              # Main entry (MCP + Express)
+│   ├── http/                 # Express HTTP server
+│   │   ├── index.ts          # Express app factory
+│   │   ├── router.ts         # Route aggregator
+│   │   ├── middleware/       # Error handler, request logger
+│   │   ├── controllers/      # Project, Card, Comment, Asset controllers
+│   │   └── routes/           # Route definitions
+│   ├── services/             # Shared services layer
+│   │   ├── FileSystem.ts     # File system operations
+│   │   ├── projectService.ts # Project business logic
+│   │   ├── cardService.ts    # Card business logic
+│   │   ├── commentService.ts # Comment business logic
+│   │   └── assetService.ts   # Asset serving
+│   ├── tools/                # MCP tool implementations
 │   │   ├── CardReader.ts     # Read card tool
 │   │   ├── CardCreator.ts    # Create card tool
 │   │   ├── CardLister.ts     # List cards tool
@@ -156,8 +210,6 @@ issue-tracker-mcp/
 │   │   ├── ProjectLister.ts  # List projects tool
 │   │   ├── CommentAdder.ts   # Add comment tool
 │   │   └── index.ts          # Tool registry
-│   ├── services/
-│   │   └── FileSystem.ts     # File system operations
 │   ├── db/
 │   │   ├── config.ts         # Knex configuration
 │   │   ├── client.ts         # Knex singleton instance
@@ -170,10 +222,30 @@ issue-tracker-mcp/
 │   │       ├── project.ts    # Project CRUD operations
 │   │       ├── card.ts       # Card CRUD operations
 │   │       └── comment.ts    # Comment CRUD operations
+│   ├── shared/
+│   │   └── types.ts          # Shared TypeScript types
 │   └── __tests__/            # Test utilities and setup
 │       ├── test-utils.ts     # Test environment setup
 │       └── test-db.ts        # Test database helpers
+├── client/                   # Vue 3 + Vite frontend
+│   ├── src/
+│   │   ├── main.ts           # App entry
+│   │   ├── App.vue           # Root component
+│   │   ├── router.ts         # Vue Router
+│   │   ├── api/client.ts     # Axios API client
+│   │   ├── stores/           # Pinia stores (projects, cards, UI)
+│   │   ├── types/            # TypeScript types
+│   │   ├── views/            # Page components
+│   │   └── components/       # Reusable components
+│   │       ├── MarkdownRenderer/  # Advanced markdown (Shiki, Mermaid, tasks)
+│   │       └── ...
+│   ├── index.html
+│   ├── package.json
+│   ├── tsconfig.json
+│   └── vite.config.ts
 ├── dist/                     # Compiled output (gitignored)
+│   ├── index.js              # Server bundle
+│   └── client/               # Vue build output
 ├── knexfile.ts              # Knex CLI configuration
 ├── package.json
 ├── tsconfig.json
@@ -186,7 +258,15 @@ issue-tracker-mcp/
 
 The project includes comprehensive automated tests using **Jest** with **ts-jest**:
 
-- **116 tests** covering all models, tools, and services
+- **164 unit/integration tests** covering all models, tools, and services
+- **7 E2E tests** (Playwright) covering critical user flows:
+  - Create project → create card → add comment
+  - Markdown rendering: code blocks with syntax highlighting
+  - Card status updates (todo → in_progress → done)
+  - Delete card (not implemented in UI)
+  - Image asset serving
+  - Navigation (back to projects list)
+  - Project card counts update
 - **87%+ code coverage** (statements, branches, functions, lines)
 - **In-memory SQLite** for fast, isolated test execution
 - Run `npm test` to execute all tests

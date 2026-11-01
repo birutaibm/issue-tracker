@@ -1,11 +1,4 @@
-import { getProjectByPath } from '../db/index.js';
-import {
-  generateSlug,
-  ensureUniqueSlug,
-  ensureProjectDirs,
-  mountProjectPath,
-} from '../services/FileSystem.js';
-import { getKnex } from '../db/client.js';
+import { createProject } from '../services/projectService.js';
 import { z } from 'zod';
 
 const name = 'create_project';
@@ -23,24 +16,7 @@ async function execute(args: Record<string, unknown> | undefined) {
     throw new Error('Title is required');
   }
 
-  const baseSlug = generateSlug(title);
-  const projectSlug = await ensureUniqueSlug(baseSlug, async (slug) => {
-    const existing = await getProjectByPath(mountProjectPath(slug));
-    return !!existing;
-  });
-
-  const projectPath = await ensureProjectDirs(projectSlug);
-
-  const knex = getKnex();
-  const [project] = await knex.transaction(async (trx) => {
-    const [p] = await trx('projects')
-      .insert({
-        title,
-        path: projectPath,
-      })
-      .returning('*');
-    return [p];
-  });
+  const project = await createProject(title);
 
   return {
     content: [{ type: 'text' as const, text: JSON.stringify(project, null, 2) }],

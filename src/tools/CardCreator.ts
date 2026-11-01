@@ -1,12 +1,4 @@
-import { getProjectById, getCardByPath } from '../db/index.js';
-import { CardStatus } from '../db/models/card.js';
-import {
-  generateSlug,
-  ensureUniqueSlug,
-  writeCardFile,
-  mountCardPath,
-} from '../services/FileSystem.js';
-import { getKnex } from '../db/client.js';
+import { createCard, updateCard } from '../services/cardService.js';
 import { z } from 'zod';
 
 const name = 'create_card';
@@ -25,41 +17,20 @@ async function execute(args: Record<string, unknown> | undefined) {
   const projectId = args?.project_id as number;
   const title = args?.title as string;
   const description = args?.description as string;
-  const status = (args?.status as CardStatus) || 'todo';
+  const status = (args?.status as 'todo' | 'in_progress' | 'done') || 'todo';
 
   if (!projectId || !title || !description) {
     throw new Error('project_id, title, and description are required');
   }
 
-  const project = await getProjectById(projectId);
-  if (!project) {
-    throw new Error(`Project with id ${projectId} not found`);
+  const card = await createCard(projectId, title, description);
+
+  if (status !== 'todo') {
+    const updated = await updateCard(card.id, { status });
+    return {
+      content: [{ type: 'text' as const, text: JSON.stringify(updated, null, 2) }],
+    };
   }
-
-  const baseSlug = generateSlug(title);
-  const cardSlug = await ensureUniqueSlug(baseSlug, async (slug) => {
-    const existing = await getCardByPath(mountCardPath(project, slug));
-    return !!existing;
-  });
-
-  const cardPath = mountCardPath(project, cardSlug);
-
-  const cardContent = `# ${title}\n\n${description}`;
-
-  const knex = getKnex();
-  const [card] = await knex.transaction(async (trx) => {
-    await writeCardFile(cardPath, cardContent);
-
-    const [c] = await trx('cards')
-      .insert({
-        title,
-        path: cardPath,
-        status,
-        project_id: projectId,
-      })
-      .returning('*');
-    return [c];
-  });
 
   return {
     content: [{ type: 'text' as const, text: JSON.stringify(card, null, 2) }],

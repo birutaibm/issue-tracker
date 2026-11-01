@@ -127,3 +127,11 @@ export function mountProjectPath(slug: string): string {
 export function mountCommentPath(card: Card, comment: Comment) {
   return join(getCommentsDir(card.path), `${comment.id}.md`);
 }
+
+export function getCardAssetsDir(cardPath: string): string {
+  return cardPath.replace(/\.md$/, '');
+}
+
+export function getAssetPath(projectSlug: string, cardSlug: string, filename: string): string {
+  return join('projects', projectSlug, 'cards', cardSlug, filename);
+}

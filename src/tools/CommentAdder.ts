@@ -1,6 +1,5 @@
-import { getCardById } from '../db/index.js';
-import { writeCommentFile } from '../services/FileSystem.js';
-import { getKnex } from '../db/client.js';
+import { getCardById } from '../services/cardService.js';
+import { createComment } from '../services/commentService.js';
 import { z } from 'zod';
 
 const name = 'add_comment';
@@ -26,13 +25,7 @@ async function execute(args: Record<string, unknown> | undefined) {
     throw new Error(`Card with id ${cardId} not found`);
   }
 
-  const knex = getKnex();
-  const comment = await knex.transaction(async (trx) => {
-    const [c] = await trx('comments').insert({ card_id: cardId }).returning('*');
-    return c;
-  });
-
-  await writeCommentFile(card.path, comment.id, content);
+  const comment = await createComment(cardId, content);
 
   return {
     content: [{ type: 'text' as const, text: JSON.stringify({ ...comment, content }, null, 2) }],

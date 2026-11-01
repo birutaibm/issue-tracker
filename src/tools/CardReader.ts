@@ -1,6 +1,4 @@
-import { getCardById, getCardByPath } from '../db/index.js';
-import { getCommentsByCardId, CommentWithContent } from '../db/models/comment.js';
-import { readCardFile, mountCommentPath, readCommentFile } from '../services/FileSystem.js';
+import { getCardByPath, getCardWithContent } from '../services/cardService.js';
 import { z } from 'zod';
 
 const name = 'read_card';
@@ -22,9 +20,12 @@ async function execute(args: Record<string, unknown> | undefined) {
 
   let card;
   if (cardId !== undefined) {
-    card = await getCardById(cardId);
+    card = await getCardWithContent(cardId);
   } else if (cardPath !== undefined) {
     card = await getCardByPath(cardPath);
+    if (card) {
+      card = await getCardWithContent(card.id);
+    }
   } else {
     throw new Error('Either card_id or card_path is required');
   }
@@ -33,26 +34,11 @@ async function execute(args: Record<string, unknown> | undefined) {
     throw new Error('Card not found');
   }
 
-  const content = await readCardFile(card.path);
-
-  // Fetch comments for this card
-  const comments = await getCommentsByCardId(card.id);
-  const commentsWithContent: CommentWithContent[] = [];
-  for (const comment of comments) {
-    const commentPath = mountCommentPath(card, comment);
-    try {
-      const commentContent = await readCommentFile(commentPath);
-      commentsWithContent.push({ ...comment, content: commentContent });
-    } catch {
-      // If comment file doesn't exist, skip it
-    }
-  }
-
   return {
     content: [
       {
         type: 'text' as const,
-        text: JSON.stringify({ ...card, content, comments: commentsWithContent }, null, 2),
+        text: JSON.stringify(card, null, 2),
       },
     ],
   };
