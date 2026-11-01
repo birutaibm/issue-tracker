@@ -29,6 +29,23 @@ function goBack() {
   router.push(`/projects/${projectId}`);
 }
 
+async function handleDeleteCard() {
+  const card = cardsStore.currentCard;
+  if (!card) return;
+
+  const confirmed = window.confirm(
+    `Delete card "${card.title}" and all of its comments? This cannot be undone.`
+  );
+  if (!confirmed) return;
+
+  try {
+    await cardsStore.deleteCard(card.id);
+    goBack();
+  } catch (err) {
+    console.error('Failed to delete card:', err);
+  }
+}
+
 function getStatusLabel(status: string) {
   const labels: Record<string, string> = {
     todo: '📋 Todo',
@@ -54,6 +71,7 @@ function getStatusLabel(status: string) {
           <option value="in_progress">🔄 In Progress</option>
           <option value="done">✅ Done</option>
         </select>
+        <button class="btn btn-danger" @click="handleDeleteCard">Delete</button>
       </div>
     </div>
 
@@ -132,5 +150,14 @@ function getStatusLabel(status: string) {
 
 .btn-secondary:hover {
   background: #d0d0d0;
+}
+
+.btn-danger {
+  background: #d32f2f;
+  color: white;
+}
+
+.btn-danger:hover {
+  background: #b71c1c;
 }
 </style>

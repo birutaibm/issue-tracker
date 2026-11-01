@@ -94,6 +94,21 @@ export async function updateProject(
 
 export async function deleteProject(id: number): Promise<boolean> {
   const knex = getKnex();
-  const deleted = await knex('projects').where({ id }).delete();
-  return deleted > 0;
+  const project = await knex('projects').where({ id }).first();
+  if (!project) return false;
+
+  const cardIds = (await knex('cards').where({ project_id: id }).pluck('id')) as number[];
+
+  await knex.transaction(async (trx) => {
+    if (cardIds.length > 0) {
+      await trx('comments').whereIn('card_id', cardIds).delete();
+    }
+    await trx('cards').where({ project_id: id }).delete();
+    await trx('projects').where({ id }).delete();
+  });
+
+  const { removeProjectFiles } = await import('../services/FileSystem.js');
+  await removeProjectFiles(project.path);
+
+  return true;
 }

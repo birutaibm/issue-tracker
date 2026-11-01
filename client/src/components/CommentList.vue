@@ -45,6 +45,17 @@ async function handleAddComment() {
     adding.value = false;
   }
 }
+
+async function handleDeleteComment(comment: CommentWithContent) {
+  const confirmed = window.confirm('Delete this comment? This cannot be undone.');
+  if (!confirmed) return;
+
+  try {
+    await cardsStore.deleteComment(props.cardId, comment.id);
+  } catch (err) {
+    console.error('Failed to delete comment:', err);
+  }
+}
 </script>
 
 <template>
@@ -55,6 +66,9 @@ async function handleAddComment() {
       <div class="comment" v-for="comment in props.comments" :key="comment.id">
         <div class="comment-header">
           <span class="comment-date">{{ formatDate(comment.created_at) }}</span>
+          <button class="btn btn-danger btn-small" @click="handleDeleteComment(comment)">
+            Delete
+          </button>
         </div>
         <MarkdownRenderer
           class="comment-content"
@@ -111,6 +125,9 @@ async function handleAddComment() {
 }
 
 .comment-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 0.5rem;
 }
 
@@ -176,5 +193,19 @@ async function handleAddComment() {
 
 .btn-primary:hover:not(:disabled) {
   background: #36a070;
+}
+
+.btn-danger {
+  background: #d32f2f;
+  color: white;
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: #b71c1c;
+}
+
+.btn-small {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
 }
 </style>

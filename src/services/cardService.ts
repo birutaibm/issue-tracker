@@ -121,6 +121,16 @@ export async function updateCard(id: number, input: UpdateCardInput): Promise<Db
 
 export async function deleteCard(id: number): Promise<boolean> {
   const knex = getKnex();
-  const deleted = await knex('cards').where({ id }).delete();
-  return deleted > 0;
+  const card = await knex('cards').where({ id }).first();
+  if (!card) return false;
+
+  await knex.transaction(async (trx) => {
+    await trx('comments').where({ card_id: id }).delete();
+    await trx('cards').where({ id }).delete();
+  });
+
+  const { removeCardFiles } = await import('../services/FileSystem.js');
+  await removeCardFiles(card.path);
+
+  return true;
 }

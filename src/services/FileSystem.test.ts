@@ -14,6 +14,10 @@ import {
   mountCardPath,
   mountProjectPath,
   mountCommentPath,
+  removeFile,
+  removeDirectory,
+  removeCardFiles,
+  removeProjectFiles,
 } from '../services/FileSystem.js';
 import { Project, Card, Comment } from '../db/index.js';
 import {
@@ -21,7 +25,7 @@ import {
   setupTestEnvironment,
   teardownTestEnvironment,
 } from '../__tests__/test-utils.js';
-import { mkdir, rm } from 'fs/promises';
+import { mkdir, rm, access, writeFile } from 'fs/promises';
 import { join, resolve } from 'path';
 
 describe('FileSystem Service', () => {
@@ -248,6 +252,73 @@ describe('FileSystem Service', () => {
       expect(result).toBe(
         join('projects', 'test-project', 'cards', 'test-card', 'comments', '5.md')
       );
+    });
+  });
+
+  describe('removeFile', () => {
+    it('should remove an existing file', async () => {
+      const filePath = join('projects/test-project/cards/test-card.md');
+      await writeCardFile(filePath, '# Test');
+      const fullPath = resolve(TEST_BASE_DIR, filePath);
+      await expect(access(fullPath)).resolves.not.toThrow();
+
+      await removeFile(filePath);
+      await expect(access(fullPath)).rejects.toThrow();
+    });
+
+    it('should not throw when removing non-existent file', async () => {
+      await expect(removeFile('projects/test-project/cards/nonexistent.md')).resolves.not.toThrow();
+    });
+  });
+
+  describe('removeDirectory', () => {
+    it('should remove a directory recursively', async () => {
+      const dirPath = join('projects/test-project/cards/test-card/comments');
+      await mkdir(resolve(TEST_BASE_DIR, dirPath), { recursive: true });
+      await writeFile(resolve(TEST_BASE_DIR, join(dirPath, '1.md')), 'content');
+      const fullPath = resolve(TEST_BASE_DIR, dirPath);
+      await expect(access(fullPath)).resolves.not.toThrow();
+
+      await removeDirectory(dirPath);
+      await expect(access(fullPath)).rejects.toThrow();
+    });
+
+    it('should not throw when removing non-existent directory', async () => {
+      await expect(
+        removeDirectory('projects/test-project/cards/nonexistent')
+      ).resolves.not.toThrow();
+    });
+  });
+
+  describe('removeCardFiles', () => {
+    it('should remove card file and its assets/comments directory', async () => {
+      const cardPath = 'projects/test-project/cards/test-card.md';
+      await writeCardFile(cardPath, '# Test Card');
+
+      const commentsDir = join('projects/test-project/cards/test-card/comments');
+      await mkdir(resolve(TEST_BASE_DIR, commentsDir), { recursive: true });
+      await writeFile(resolve(TEST_BASE_DIR, join(commentsDir, '1.md')), 'comment');
+
+      await removeCardFiles(cardPath);
+
+      const fullCardPath = resolve(TEST_BASE_DIR, cardPath);
+      const commentsFullPath = resolve(TEST_BASE_DIR, commentsDir);
+      await expect(access(fullCardPath)).rejects.toThrow();
+      await expect(access(commentsFullPath)).rejects.toThrow();
+    });
+  });
+
+  describe('removeProjectFiles', () => {
+    it('should remove project directory recursively', async () => {
+      const projectPath = 'projects/test-project';
+      await mkdir(resolve(TEST_BASE_DIR, projectPath), { recursive: true });
+      await mkdir(resolve(TEST_BASE_DIR, join(projectPath, 'cards')), { recursive: true });
+      await writeFile(resolve(TEST_BASE_DIR, join(projectPath, 'cards', 'card.md')), 'card');
+      const fullPath = resolve(TEST_BASE_DIR, projectPath);
+      await expect(access(fullPath)).resolves.not.toThrow();
+
+      await removeProjectFiles(projectPath);
+      await expect(access(fullPath)).rejects.toThrow();
     });
   });
 });

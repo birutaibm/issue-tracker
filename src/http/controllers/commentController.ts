@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { listComments, createComment } from '../../services/commentService.js';
+import { listComments, createComment, deleteComment } from '../../services/commentService.js';
 
 export async function list(req: Request, res: Response) {
   const cardId = Number(req.params.cardId);
@@ -15,4 +15,14 @@ export async function create(req: Request, res: Response) {
   }
   const comment = await createComment(cardId, content);
   res.status(201).json(comment);
+}
+
+export async function remove(req: Request, res: Response) {
+  const cardId = Number(req.params.cardId);
+  const id = Number(req.params.id);
+  const deleted = await deleteComment(id, cardId);
+  if (!deleted) {
+    return res.status(404).json({ error: 'Comment not found' });
+  }
+  res.status(204).send();
 }

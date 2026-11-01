@@ -240,13 +240,42 @@ test.describe('Issue Tracker E2E - Critical User Flows', () => {
     await expect(page.locator('select')).toHaveValue('done');
   });
 
-  test('delete card - not implemented in UI', async ({ page }) => {
+  test('delete comment', async ({ page }) => {
     await page.click('button:has-text("New Project")');
-    await page.fill('input#title', 'Delete Test Project');
+    await page.fill('input#title', 'Comment Delete Project');
     await page.click('button:has-text("Create")');
-    await expect(page.locator('text=Delete Test Project').first()).toBeVisible();
+    await expect(page.locator('text=Comment Delete Project').first()).toBeVisible();
 
-    const projectCard = page.locator('.project-card', { hasText: 'Delete Test Project' });
+    const projectCard = page.locator('.project-card', { hasText: 'Comment Delete Project' });
+    await projectCard.locator('a:has-text("Open")').first().click();
+    await page.click('button:has-text("New Card")');
+    await page.fill('input#title', 'Card With Comment');
+    await page.fill('textarea#content', 'Card description');
+    await page.click('button:has-text("Create")');
+    await expect(page.locator('text=Card With Comment').first()).toBeVisible();
+
+    const cardItem = page.locator('.card-item', { hasText: 'Card With Comment' });
+    await cardItem.first().click();
+    await expect(page.locator('h2:has-text("Card With Comment")')).toBeVisible();
+
+    await page.fill('textarea[placeholder*="comment"]', 'Comment to delete');
+    await page.click('button:has-text("Add Comment")');
+    await expect(page.locator('text=Comment to delete').first()).toBeVisible();
+
+    await page.evaluate(() => {
+      window.confirm = () => true;
+    });
+    await page.click('button:has-text("Delete")');
+    await expect(page.locator('text=Comment to delete')).not.toBeVisible();
+  });
+
+  test('delete card', async ({ page }) => {
+    await page.click('button:has-text("New Project")');
+    await page.fill('input#title', 'Card Delete Project');
+    await page.click('button:has-text("Create")');
+    await expect(page.locator('text=Card Delete Project').first()).toBeVisible();
+
+    const projectCard = page.locator('.project-card', { hasText: 'Card Delete Project' });
     await projectCard.locator('a:has-text("Open")').first().click();
     await page.click('button:has-text("New Card")');
     await page.fill('input#title', 'Card to Delete');
@@ -254,8 +283,40 @@ test.describe('Issue Tracker E2E - Critical User Flows', () => {
     await page.click('button:has-text("Create")');
     await expect(page.locator('text=Card to Delete').first()).toBeVisible();
 
-    // Verify no delete button exists in card detail view
-    await expect(page.locator('button:has-text("Delete")')).not.toBeVisible();
+    const cardItem = page.locator('.card-item', { hasText: 'Card to Delete' });
+    await cardItem.first().click();
+    await expect(page.locator('h2:has-text("Card to Delete")')).toBeVisible();
+
+    await page.evaluate(() => {
+      window.confirm = () => true;
+    });
+    await page.click('button:has-text("Delete")');
+    await expect(page.locator('h2:has-text("Card to Delete")')).not.toBeVisible();
+    await expect(page.locator('h2')).toContainText('Card Delete Project');
+  });
+
+  test('delete project', async ({ page }) => {
+    await page.click('button:has-text("New Project")');
+    await page.fill('input#title', 'Project to Delete');
+    await page.click('button:has-text("Create")');
+    await expect(page.locator('text=Project to Delete').first()).toBeVisible();
+
+    const projectCard = page.locator('.project-card', { hasText: 'Project to Delete' });
+    await projectCard.locator('a:has-text("Open")').first().click();
+    await page.click('button:has-text("New Card")');
+    await page.fill('input#title', 'Card inside deleted project');
+    await page.fill('textarea#content', 'This card goes away too');
+    await page.click('button:has-text("Create")');
+    await expect(page.locator('text=Card inside deleted project').first()).toBeVisible();
+
+    await page.evaluate(() => {
+      window.confirm = () => true;
+    });
+    await page.click('button:has-text("Delete Project")');
+    await page.waitForURL('/');
+    await expect(page.locator('text=Project to Delete')).not.toBeVisible();
+    await expect(page.locator('text=Card inside deleted project')).not.toBeVisible();
+    await expect(page.locator('h2')).toContainText('Projects');
   });
 
   test('image asset serving', async ({ page }) => {
