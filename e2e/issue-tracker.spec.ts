@@ -70,6 +70,51 @@ test.describe('Issue Tracker E2E - Critical User Flows', () => {
     await expect(page.locator('pre code')).toContainText('const hello = "world";');
   });
 
+  test('markdown rendering - mermaid diagrams', async ({ page }) => {
+    const projectTitle = `Mermaid Test ${Date.now()}`;
+    await page.click('button:has-text("New Project")');
+    await page.fill('input#title', projectTitle);
+    await page.click('button:has-text("Create")');
+    await expect(page.locator(`text=${projectTitle}`).first()).toBeVisible();
+
+    const projectCard = page.locator('.project-card', { hasText: projectTitle });
+    await projectCard.locator('a:has-text("Open")').first().click();
+    await page.click('button:has-text("New Card")');
+    await page.fill('input#title', 'Mermaid Card');
+    await page.fill('textarea#content', '```mermaid\ngraph TD\n    A --> B\n```');
+    await page.click('button:has-text("Create")');
+
+    const cardItem = page.locator('.card-item', { hasText: 'Mermaid Card' });
+    await cardItem.first().click();
+
+    // Verify mermaid diagram rendered as SVG
+    await expect(page.locator('.mermaid svg')).toBeVisible();
+  });
+
+  test('markdown rendering - task lists', async ({ page }) => {
+    const projectTitle = `Task List Test Project ${Date.now()}`;
+    await page.click('button:has-text("New Project")');
+    await page.fill('input#title', projectTitle);
+    await page.click('button:has-text("Create")');
+    await expect(page.locator(`text=${projectTitle}`).first()).toBeVisible();
+
+    const projectCard = page.locator('.project-card', { hasText: projectTitle });
+    await projectCard.locator('a:has-text("Open")').first().click();
+    await page.click('button:has-text("New Card")');
+    await page.fill('input#title', 'Task List Card');
+    await page.fill('textarea#content', '- [ ] Todo item\n- [x] Done item');
+    await page.click('button:has-text("Create")');
+
+    const cardItem = page.locator('.card-item', { hasText: 'Task List Card' });
+    await cardItem.first().click();
+
+    // Verify task list rendered with one checkbox per item and correct state
+    const checkboxes = page.locator('.markdown-renderer input[type="checkbox"]');
+    await expect(checkboxes).toHaveCount(2);
+    await expect(checkboxes.nth(0)).not.toBeChecked();
+    await expect(checkboxes.nth(1)).toBeChecked();
+  });
+
   test('card status update (todo -> in_progress -> done)', async ({ page }) => {
     await page.click('button:has-text("New Project")');
     await page.fill('input#title', 'Status Test Project');

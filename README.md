@@ -15,7 +15,7 @@ Now includes an **Express HTTP server + Vue 3 frontend** for web-based access to
 - **Database persistence** - SQLite database with Knex.js for projects, cards, and comments
 - **HTTP API** - RESTful API for all CRUD operations
 - **Vue 3 Frontend** - Web interface for managing projects, cards, and comments
-- **Advanced Markdown** - Syntax highlighting (Shiki), code blocks, image serving
+- **Advanced Markdown** - Syntax highlighting (Shiki), code blocks, Mermaid diagrams, task lists, image serving
 
 ## Tools (MCP)
 
@@ -277,9 +277,11 @@ issue-tracker-mcp/
 The project includes comprehensive automated tests using **Jest** with **ts-jest**:
 
 - **164 unit/integration tests** covering all models, tools, and services
-- **7 E2E tests** (Playwright) covering critical user flows:
+- **9 E2E tests** (Playwright) covering critical user flows:
   - Create project → create card → add comment
   - Markdown rendering: code blocks with syntax highlighting
+  - Markdown rendering: Mermaid diagrams
+  - Markdown rendering: task lists (checked/unchecked)
   - Card status updates (todo → in_progress → done)
   - Delete card (not implemented in UI)
   - Image asset serving

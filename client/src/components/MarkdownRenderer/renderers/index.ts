@@ -5,46 +5,39 @@ export const imageRenderer = (href: string, title: string | null, text: string):
     const clean = href.replace(/^\.?\//, '');
     href = '__ASSET_PATH__/' + clean;
   }
-  const titleAttr = title ? ' title="' + title.replace(/"/g, '"') + '"' : '';
-  return (
-    '<img src="' +
-    href +
-    '" alt="' +
-    text.replace(/"/g, '"') +
-    '"' +
-    titleAttr +
-    ' loading="lazy" />'
-  );
+  const titleAttr = title ? ` title="${escapeHtml(title)}"` : '';
+  return `<img src="${escapeHtml(href)}" alt="${escapeHtml(text)}"${titleAttr} loading="lazy" />`;
 };
 
 export const codeRenderer = (code: string, language: string | undefined): string => {
-  const lang = language || 'text';
+  const lang = (language || 'text').trim().split(/\s+/)[0] || 'text';
   if (lang === 'mermaid') {
-    return '<div class="mermaid">' + escapeHtml(code) + '</div>';
+    return `<div class="mermaid">${escapeHtml(code)}</div>`;
   }
-  return '<pre><code class="language-' + lang + '">' + escapeHtml(code) + '</code></pre>';
+  return `<pre><code class="language-${escapeHtml(lang)}">${escapeHtml(code)}</code></pre>`;
 };
 
-export const taskListRenderer = (text: string, task: boolean, checked: boolean): string => {
-  if (!task) return '<li>' + text + '</li>';
-  const checkbox =
-    '<input type="checkbox" class="task-list-item-checkbox" ' +
-    (checked ? 'checked="checked"' : '') +
-    ' disabled /> ';
-  return '<li class="task-list-item">' + checkbox + text + '</li>';
+export const checkboxRenderer = (checked: boolean): string => {
+  const checkedAttr = checked ? ' checked=""' : '';
+  return `<input type="checkbox" class="task-list-item-checkbox"${checkedAttr} disabled="" />`;
+};
+
+export const taskListRenderer = (text: string, task: boolean): string => {
+  return task ? `<li class="task-list-item">${text}</li>` : `<li>${text}</li>`;
 };
 
 function escapeHtml(text: string): string {
   return text
-    .replace(/&/g, '&')
-    .replace(/</g, '<')
-    .replace(/>/g, '>')
-    .replace(/"/g, '"')
-    .replace(/'/g, "'");
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 export const renderers: RendererObject = {
   image: imageRenderer,
   code: codeRenderer,
   listitem: taskListRenderer,
+  checkbox: checkboxRenderer,
 };
