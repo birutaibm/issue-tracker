@@ -112,10 +112,25 @@ Add to your OpenCode config (`~/.config/opencode/opencode.json`):
 {
   "$schema": "https://opencode.ai/config.json",
   "mcp": {
-    "issue-tracker": {
-      "type": "local",
-      "command": ["node", "/path/to/issue-tracker-mcp/dist/index.js"],
-      "enabled": true
+    "servers": {
+      "issue-tracker": {
+        "type": "remote",
+        "url": "http://localhost:3000/mcp"
+      }
+    }
+  }
+}
+```
+
+For Docker/container environments, use `host.docker.internal`:
+```json
+{
+  "mcp": {
+    "servers": {
+      "issue-tracker": {
+        "type": "remote",
+        "url": "http://host.docker.internal:3000/mcp"
+      }
     }
   }
 }
@@ -123,9 +138,11 @@ Add to your OpenCode config (`~/.config/opencode/opencode.json`):
 
 Then restart OpenCode. The tools will be available as `issue-tracker_*` (e.g., `issue-tracker_read_card`).
 
-## HTTP Server + Frontend
+**Note**: The MCP endpoint uses Streamable HTTP with session cookies. OpenCode's remote client will automatically handle session persistence via cookies.
 
-The server runs both MCP (stdio) and HTTP (port 3000) in the same process:
+## HTTP Server + MCP
+
+The server runs both **MCP (Streamable HTTP at /mcp)** and **HTTP REST API (port 3000)** in the same process:
 
 ```bash
 # Development (both servers with hot reload)
@@ -139,6 +156,7 @@ npm start
 ```
 
 The Vue frontend will be available at `http://localhost:3000` (serves static files from `dist/client/`).
+The MCP endpoint is available at `http://localhost:3000/mcp` (stateful Streamable HTTP transport with cookie-based session persistence).
 
 ## Development
 

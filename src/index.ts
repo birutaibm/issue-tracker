@@ -1,5 +1,5 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { ensureBaseDir } from './services/FileSystem.js';
 import { getTool, listTools } from './tools/index.js';
 import { createExpressApp } from './http/index.js';
@@ -23,19 +23,24 @@ for (const toolName of listTools()) {
   mcpServer.registerTool(tool.name, tool.schema, tool.execute);
 }
 
+// Create stateful Streamable HTTP transport (generates session IDs)
+const mcpTransport = new StreamableHTTPServerTransport({
+  sessionIdGenerator: () => crypto.randomUUID(),
+});
+
 async function main() {
   await ensureBaseDir();
 
-  // Start MCP server (stdio)
-  const transport = new StdioServerTransport();
-  await mcpServer.connect(transport);
-  console.error('Issue Tracker MCP server running on stdio');
+  // Connect MCP server to HTTP transport
+  await mcpServer.connect(mcpTransport);
 
-  // Start Express server (HTTP)
-  const app = createExpressApp();
+  // Create Express app with MCP transport
+  const app = createExpressApp(mcpTransport);
+
+  // Start HTTP server (serves both REST API and MCP)
   const PORT = process.env.PORT || 3000;
   app.listen(PORT, () => {
-    console.error(`HTTP server running on http://localhost:${PORT}`);
+    console.error(`HTTP + MCP server running on http://localhost:${PORT}`);
   });
 }
 
