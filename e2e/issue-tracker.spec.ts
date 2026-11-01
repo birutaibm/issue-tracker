@@ -98,6 +98,38 @@ test.describe('Issue Tracker E2E - Critical User Flows', () => {
     await expect(page.locator('pre code')).toContainText('const hello = "world";');
   });
 
+  test('markdown rendering - code blocks scroll horizontally', async ({ page }) => {
+    const projectTitle = `Code Overflow Test ${Date.now()}`;
+    await page.click('button:has-text("New Project")');
+    await page.fill('input#title', projectTitle);
+    await page.click('button:has-text("Create")');
+    await expect(page.locator(`text=${projectTitle}`).first()).toBeVisible();
+
+    const projectCard = page.locator('.project-card', { hasText: projectTitle });
+    await projectCard.locator('a:has-text("Open")').first().click();
+    await page.click('button:has-text("New Card")');
+    await page.fill('input#title', 'Overflow Card');
+    const longLine = `const value = "${'x'.repeat(300)}";`;
+    await page.fill('textarea#content', '```typescript\n' + longLine + '\n```');
+    await page.click('button:has-text("Create")');
+
+    const cardItem = page.locator('.card-item', { hasText: 'Overflow Card' });
+    await cardItem.first().click();
+
+    // Wait for Shiki to replace the plain code block
+    const pre = page.locator('.markdown-renderer pre.shiki').first();
+    await expect(pre).toBeVisible();
+
+    const metrics = await pre.evaluate((el) => ({
+      overflowX: getComputedStyle(el).overflowX,
+      scrollWidth: el.scrollWidth,
+      clientWidth: el.clientWidth,
+    }));
+
+    expect(metrics.overflowX).toBe('auto');
+    expect(metrics.scrollWidth).toBeGreaterThan(metrics.clientWidth);
+  });
+
   test('markdown rendering - mermaid diagrams', async ({ page }) => {
     const projectTitle = `Mermaid Test ${Date.now()}`;
     await page.click('button:has-text("New Project")');

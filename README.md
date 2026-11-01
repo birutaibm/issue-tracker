@@ -277,10 +277,11 @@ issue-tracker-mcp/
 The project includes comprehensive automated tests using **Jest** with **ts-jest**:
 
 - **164 unit/integration tests** covering all models, tools, and services
-- **10 E2E tests** (Playwright) covering critical user flows:
+- **11 E2E tests** (Playwright) covering critical user flows:
   - Create project → create card → add comment
   - Comment Markdown rendering (bold, inline code)
   - Markdown rendering: code blocks with syntax highlighting
+  - Markdown rendering: code blocks with horizontal scrolling for long lines
   - Markdown rendering: Mermaid diagrams
   - Markdown rendering: task lists (checked/unchecked)
   - Card status updates (todo → in_progress → done)

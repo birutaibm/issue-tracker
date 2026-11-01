@@ -146,10 +146,15 @@ watch(
   border-radius: 3px;
 }
 
-.markdown-renderer pre {
+/* v-html content does not receive the scoped-style attribute, so code blocks
+   need :deep() to get horizontal scrolling for long lines. */
+.markdown-renderer :deep(pre) {
   margin: 1rem 0;
   border-radius: 6px;
-  overflow: auto;
+  overflow-x: auto;
+  overflow-y: hidden;
+  max-width: 100%;
+  box-sizing: border-box;
   background: #2d2d2d;
 }
 
