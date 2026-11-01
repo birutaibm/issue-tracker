@@ -16,6 +16,28 @@ export default tseslint.config(
       '@typescript-eslint/no-explicit-any': 'warn',
       '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
     },
-    ignores: ['dist/', 'node_modules/', '*.config.js'],
+    languageOptions: {
+      globals: {
+        console: 'readonly',
+        window: 'readonly',
+        document: 'readonly',
+        HTMLElement: 'readonly',
+        fetch: 'readonly',
+        localStorage: 'readonly',
+        sessionStorage: 'readonly',
+      },
+    },
+    ignores: [
+      'dist/',
+      'node_modules/',
+      '*.config.js',
+      'client/dist/',
+      '*.d.ts',
+      'client/src/**/*.js',
+      'client/src/**/*.d.ts',
+      'client/src/**/*.js.map',
+      'client/src/',
+      'e2e/',
+    ],
   }
 );

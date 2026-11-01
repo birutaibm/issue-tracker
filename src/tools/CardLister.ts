@@ -1,4 +1,5 @@
-import { getProjectById, listCards } from '../db/index.js';
+import { listCards } from '../services/cardService.js';
+import { getProjectById } from '../services/projectService.js';
 import { z } from 'zod';
 
 const name = 'list_cards';
