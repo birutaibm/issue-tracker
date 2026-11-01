@@ -19,7 +19,7 @@ async function enhanceWithContent(container: HTMLElement) {
   for (const block of codeBlocks) {
     const codeElement = block as HTMLElement;
     const className = codeElement.className;
-    const langMatch = className.match(/language-(\w+)/);
+    const langMatch = className.match(/language-([^\s]+)/);
     const lang = langMatch ? langMatch[1] : 'text';
     const code = codeElement.textContent || '';
 

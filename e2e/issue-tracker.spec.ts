@@ -130,6 +130,46 @@ test.describe('Issue Tracker E2E - Critical User Flows', () => {
     expect(metrics.scrollWidth).toBeGreaterThan(metrics.clientWidth);
   });
 
+  test('markdown rendering - vue and unknown code languages', async ({ page }) => {
+    const projectTitle = `Code Language Test ${Date.now()}`;
+    await page.click('button:has-text("New Project")');
+    await page.fill('input#title', projectTitle);
+    await page.click('button:has-text("Create")');
+    await expect(page.locator(`text=${projectTitle}`).first()).toBeVisible();
+
+    const projectCard = page.locator('.project-card', { hasText: projectTitle });
+    await projectCard.locator('a:has-text("Open")').first().click();
+    await page.click('button:has-text("New Card")');
+    await page.fill('input#title', 'Vue Language Card');
+    const content = [
+      '```vue',
+      '<template>',
+      '  <div>{{ message }}</div>',
+      '</template>',
+      '```',
+      '',
+      '```not-a-real-language',
+      'plain <text> content',
+      '```',
+    ].join('\n');
+    await page.fill('textarea#content', content);
+    await page.click('button:has-text("Create")');
+
+    const cardItem = page.locator('.card-item', { hasText: 'Vue Language Card' });
+    await cardItem.first().click();
+
+    // Both blocks must be replaced by Shiki, including the unknown language
+    const blocks = page.locator('.markdown-renderer pre.shiki');
+    await expect(blocks).toHaveCount(2);
+
+    // Vue is highlighted with its grammar
+    await expect(blocks.nth(0)).toContainText('<template>');
+    expect(await blocks.nth(0).innerHTML()).toContain('<span style=');
+
+    // Unknown languages fall back to plain text without breaking the page
+    await expect(blocks.nth(1)).toContainText('plain <text> content');
+  });
+
   test('markdown rendering - mermaid diagrams', async ({ page }) => {
     const projectTitle = `Mermaid Test ${Date.now()}`;
     await page.click('button:has-text("New Project")');
