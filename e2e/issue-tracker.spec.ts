@@ -50,6 +50,34 @@ test.describe('Issue Tracker E2E - Critical User Flows', () => {
     await expect(page.locator('text=Comments (1)')).toBeVisible();
   });
 
+  test('comment markdown rendering', async ({ page }) => {
+    const projectTitle = `Comment Markdown Test ${Date.now()}`;
+    await page.click('button:has-text("New Project")');
+    await page.fill('input#title', projectTitle);
+    await page.click('button:has-text("Create")');
+    await expect(page.locator(`text=${projectTitle}`).first()).toBeVisible();
+
+    const projectCard = page.locator('.project-card', { hasText: projectTitle });
+    await projectCard.locator('a:has-text("Open")').first().click();
+    await page.click('button:has-text("New Card")');
+    await page.fill('input#title', 'Comment Card');
+    await page.fill('textarea#content', 'Card description');
+    await page.click('button:has-text("Create")');
+
+    const cardItem = page.locator('.card-item', { hasText: 'Comment Card' });
+    await cardItem.first().click();
+
+    // Add a Markdown comment
+    await page.fill('textarea[placeholder*="comment"]', 'This is **bold** and `code`.');
+    await page.click('button:has-text("Add Comment")');
+
+    const comment = page.locator('.comment-content').first();
+    await expect(comment.locator('strong:has-text("bold")')).toBeVisible();
+    await expect(comment.locator('code:has-text("code")')).toBeVisible();
+    // Raw Markdown markers must not be shown as plain text
+    await expect(comment).not.toContainText('**bold**');
+  });
+
   test('markdown rendering - code blocks with syntax highlighting', async ({ page }) => {
     await page.click('button:has-text("New Project")');
     await page.fill('input#title', 'Markdown Test Code');

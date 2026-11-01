@@ -2,6 +2,7 @@
 import { ref } from 'vue';
 import { useCardsStore } from '@/stores/cards';
 import type { CommentWithContent } from '@shared/types';
+import MarkdownRenderer from './MarkdownRenderer.vue';
 
 interface Props {
   cardId: number;
@@ -55,7 +56,12 @@ async function handleAddComment() {
         <div class="comment-header">
           <span class="comment-date">{{ formatDate(comment.created_at) }}</span>
         </div>
-        <div class="comment-content" v-html="comment.content"></div>
+        <MarkdownRenderer
+          class="comment-content"
+          :markdown="comment.content"
+          :project-slug="cardsStore.currentCard?.project_slug || ''"
+          :card-slug="cardsStore.currentCard?.slug || ''"
+        />
       </div>
     </div>
 
@@ -115,28 +121,7 @@ async function handleAddComment() {
 
 .comment-content {
   line-height: 1.6;
-}
-
-.comment-content code {
-  background: #e0e0e0;
-  padding: 0.125rem 0.25rem;
-  border-radius: 3px;
-  font-size: 0.875em;
-}
-
-.comment-content pre {
-  background: #2d2d2d;
-  color: #f8f8f2;
-  padding: 1rem;
-  border-radius: 4px;
-  overflow-x: auto;
-  margin: 0.5rem 0;
-}
-
-.comment-content pre code {
-  background: none;
-  padding: 0;
-  color: inherit;
+  font-size: 0.95rem;
 }
 
 .no-comments {
