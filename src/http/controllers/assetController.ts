@@ -1,7 +1,7 @@
-import { Request, Response } from 'express';
+import { asyncHandler } from '../middleware/asyncHandler.js';
 import { serveAsset } from '../../services/assetService.js';
 
-export async function serve(req: Request, res: Response) {
+export const serve = asyncHandler(async (req, res) => {
   const { projectSlug, cardSlug, filename } = req.params;
 
   const result = await serveAsset(projectSlug, cardSlug, filename);
@@ -11,4 +11,4 @@ export async function serve(req: Request, res: Response) {
 
   res.setHeader('Content-Type', result.mimeType);
   res.sendFile(result.path);
-}
+});

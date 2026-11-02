@@ -112,10 +112,28 @@ export async function getCardWithContent(id: number): Promise<CardWithContent | 
 
 export async function updateCard(id: number, input: UpdateCardInput): Promise<DbCard | null> {
   const knex = getKnex();
-  if (Object.keys(input).length === 0) {
+  const { content, ...dbInput } = input;
+  const dbUpdate = Object.fromEntries(
+    Object.entries(dbInput).filter(([, value]) => value !== undefined)
+  );
+
+  if (content === undefined && Object.keys(dbUpdate).length === 0) {
     return getCardById(id);
   }
-  const [card] = await knex('cards').where({ id }).update(input).returning('*');
+
+  const existing = await getCardById(id);
+  if (!existing) return null;
+
+  if (content !== undefined) {
+    const { writeCardFile } = await import('../services/FileSystem.js');
+    await writeCardFile(existing.path, content);
+  }
+
+  if (Object.keys(dbUpdate).length === 0) {
+    return existing;
+  }
+
+  const [card] = await knex('cards').where({ id }).update(dbUpdate).returning('*');
   return card || null;
 }
 

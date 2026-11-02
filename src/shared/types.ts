@@ -68,6 +68,7 @@ export interface CreateCardInput {
 export interface UpdateCardInput {
   title?: string;
   status?: CardStatus;
+  content?: string;
 }
 
 export interface CreateCommentInput {

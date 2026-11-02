@@ -167,6 +167,17 @@ describe('Card Service', () => {
       expect(updated?.status).toBe('in_progress');
     });
 
+    it('should update card content in the markdown file', async () => {
+      const card = await createCard(projectId, 'Test Card', 'Description');
+      const updated = await updateCard(card.id, { content: '# Updated\n\nNew content' });
+
+      expect(updated).not.toBeNull();
+      expect(updated?.title).toBe('Test Card');
+
+      const cardWithContent = await getCardWithContent(card.id);
+      expect(cardWithContent?.content).toBe('# Updated\n\nNew content');
+    });
+
     it('should return null for non-existent card', async () => {
       const updated = await updateCard(999, { title: 'New Title' });
       expect(updated).toBeNull();

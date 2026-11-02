@@ -38,6 +38,7 @@ Now includes an **Express HTTP server + Vue 3 frontend** for web-based access to
 | GET | `/api/projects` | List all projects |
 | POST | `/api/projects` | Create project |
 | GET | `/api/projects/:id` | Get project with card summary |
+| PATCH | `/api/projects/:id` | Update project title |
 | GET | `/api/projects/:id/cards` | List cards in project |
 | POST | `/api/projects/:id/cards` | Create card |
 | GET | `/api/cards/:id` | Get card with content + comments |
@@ -202,8 +203,7 @@ npm run test:watch
 # Run tests with coverage
 npm run test:coverage
 
-# Run E2E tests (requires running server)
-npm run start &
+# Run E2E tests (Playwright starts the server automatically)
 npx playwright test
 ```
 
@@ -257,8 +257,7 @@ issue-tracker-mcp/
 │   │   ├── router.ts         # Vue Router
 │   │   ├── api/client.ts     # Axios API client
 │   │   ├── stores/           # Pinia stores (projects, cards, UI)
-│   │   ├── types/            # TypeScript types
-│   │   ├── views/            # Page components
+│   │   ├── views/            # Page components (shared types come from @shared)
 │   │   └── components/       # Reusable components
 │   │       ├── MarkdownRenderer/  # Advanced markdown (Shiki, Mermaid, tasks)
 │   │       └── ...
@@ -281,7 +280,7 @@ issue-tracker-mcp/
 
 The project includes comprehensive automated tests using **Jest** with **ts-jest**:
 
-- **164 unit/integration tests** covering all models, tools, and services
+- **183 unit/integration tests** covering all models, tools, and services
 - **14 E2E tests** (Playwright) covering critical user flows:
   - Create project → create card → add comment
   - Comment Markdown rendering (bold, inline code)

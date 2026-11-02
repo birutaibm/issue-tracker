@@ -2,7 +2,9 @@ import type { RendererObject } from 'marked';
 
 export const imageRenderer = (href: string, title: string | null, text: string): string => {
   if (href.startsWith('./') || href.startsWith('../')) {
-    const clean = href.replace(/^\.?\//, '');
+    // Card assets are served from a flat directory, so normalize any leading
+    // ./ or ../ segments instead of allowing the browser to escape the route.
+    const clean = href.replace(/^(?:\.\/|\.\.\/)+/, '');
     href = '__ASSET_PATH__/' + clean;
   }
   const titleAttr = title ? ` title="${escapeHtml(title)}"` : '';
