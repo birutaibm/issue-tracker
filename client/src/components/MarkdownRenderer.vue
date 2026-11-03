@@ -12,17 +12,14 @@ const props = defineProps<Props>();
 const html = ref('');
 const containerRef = ref<HTMLElement | null>(null);
 
-async function enhanceWithShiki(
-  container: HTMLElement,
-  context: { projectSlug: string; cardSlug: string }
-) {
+async function enhanceWithContent(container: HTMLElement) {
   // Highlight code blocks with Shiki
   const { highlightCode } = await import('./MarkdownRenderer/useShiki.js');
   const codeBlocks = container.querySelectorAll('pre code[class*="language-"]');
   for (const block of codeBlocks) {
     const codeElement = block as HTMLElement;
     const className = codeElement.className;
-    const langMatch = className.match(/language-(\w+)/);
+    const langMatch = className.match(/language-([^\s]+)/);
     const lang = langMatch ? langMatch[1] : 'text';
     const code = codeElement.textContent || '';
 
@@ -54,10 +51,7 @@ async function render() {
   // Wait for DOM to update, then enhance with Shiki/Mermaid
   await nextTick();
   if (containerRef.value) {
-    await enhanceWithShiki(containerRef.value, {
-      projectSlug: props.projectSlug,
-      cardSlug: props.cardSlug,
-    });
+    await enhanceWithContent(containerRef.value);
   }
 }
 
@@ -152,10 +146,15 @@ watch(
   border-radius: 3px;
 }
 
-.markdown-renderer pre {
+/* v-html content does not receive the scoped-style attribute, so code blocks
+   need :deep() to get horizontal scrolling for long lines. */
+.markdown-renderer :deep(pre) {
   margin: 1rem 0;
   border-radius: 6px;
-  overflow: auto;
+  overflow-x: auto;
+  overflow-y: hidden;
+  max-width: 100%;
+  box-sizing: border-box;
   background: #2d2d2d;
 }
 

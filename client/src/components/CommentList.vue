@@ -2,6 +2,7 @@
 import { ref } from 'vue';
 import { useCardsStore } from '@/stores/cards';
 import type { CommentWithContent } from '@shared/types';
+import MarkdownRenderer from './MarkdownRenderer.vue';
 
 interface Props {
   cardId: number;
@@ -44,6 +45,17 @@ async function handleAddComment() {
     adding.value = false;
   }
 }
+
+async function handleDeleteComment(comment: CommentWithContent) {
+  const confirmed = window.confirm('Delete this comment? This cannot be undone.');
+  if (!confirmed) return;
+
+  try {
+    await cardsStore.deleteComment(props.cardId, comment.id);
+  } catch (err) {
+    console.error('Failed to delete comment:', err);
+  }
+}
 </script>
 
 <template>
@@ -54,8 +66,16 @@ async function handleAddComment() {
       <div class="comment" v-for="comment in props.comments" :key="comment.id">
         <div class="comment-header">
           <span class="comment-date">{{ formatDate(comment.created_at) }}</span>
+          <button class="btn btn-danger btn-small" @click="handleDeleteComment(comment)">
+            Delete
+          </button>
         </div>
-        <div class="comment-content" v-html="comment.content"></div>
+        <MarkdownRenderer
+          class="comment-content"
+          :markdown="comment.content"
+          :project-slug="cardsStore.currentCard?.project_slug || ''"
+          :card-slug="cardsStore.currentCard?.slug || ''"
+        />
       </div>
     </div>
 
@@ -105,6 +125,9 @@ async function handleAddComment() {
 }
 
 .comment-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 0.5rem;
 }
 
@@ -115,28 +138,7 @@ async function handleAddComment() {
 
 .comment-content {
   line-height: 1.6;
-}
-
-.comment-content code {
-  background: #e0e0e0;
-  padding: 0.125rem 0.25rem;
-  border-radius: 3px;
-  font-size: 0.875em;
-}
-
-.comment-content pre {
-  background: #2d2d2d;
-  color: #f8f8f2;
-  padding: 1rem;
-  border-radius: 4px;
-  overflow-x: auto;
-  margin: 0.5rem 0;
-}
-
-.comment-content pre code {
-  background: none;
-  padding: 0;
-  color: inherit;
+  font-size: 0.95rem;
 }
 
 .no-comments {
@@ -191,5 +193,19 @@ async function handleAddComment() {
 
 .btn-primary:hover:not(:disabled) {
   background: #36a070;
+}
+
+.btn-danger {
+  background: #d32f2f;
+  color: white;
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: #b71c1c;
+}
+
+.btn-small {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
 }
 </style>

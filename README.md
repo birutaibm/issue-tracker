@@ -12,10 +12,13 @@ Now includes an **Express HTTP server + Vue 3 frontend** for web-based access to
 - **List projects** - List all projects
 - **List cards** - List all cards in a specific project
 - **Add comment** - Add comments to cards (stored in database + markdown files)
+- **Delete comment** - Delete a comment (database record + markdown file)
+- **Delete card** - Delete a card (comments, markdown file, and assets folder)
+- **Delete project** - Delete a project (cards, comments, project folder, and database records)
 - **Database persistence** - SQLite database with Knex.js for projects, cards, and comments
 - **HTTP API** - RESTful API for all CRUD operations
 - **Vue 3 Frontend** - Web interface for managing projects, cards, and comments
-- **Advanced Markdown** - Syntax highlighting (Shiki), code blocks, image serving
+- **Advanced Markdown** - Syntax highlighting (Shiki) including Vue SFCs and unknown-language fallback, code blocks, Mermaid diagrams, task lists, image serving
 
 ## Tools (MCP)
 
@@ -35,6 +38,7 @@ Now includes an **Express HTTP server + Vue 3 frontend** for web-based access to
 | GET | `/api/projects` | List all projects |
 | POST | `/api/projects` | Create project |
 | GET | `/api/projects/:id` | Get project with card summary |
+| PATCH | `/api/projects/:id` | Update project title |
 | GET | `/api/projects/:id/cards` | List cards in project |
 | POST | `/api/projects/:id/cards` | Create card |
 | GET | `/api/cards/:id` | Get card with content + comments |
@@ -42,6 +46,8 @@ Now includes an **Express HTTP server + Vue 3 frontend** for web-based access to
 | DELETE | `/api/cards/:id` | Delete card |
 | GET | `/api/cards/:id/comments` | List comments |
 | POST | `/api/cards/:id/comments` | Add comment |
+| DELETE | `/api/cards/:cardId/comments/:id` | Delete comment |
+| DELETE | `/api/projects/:id` | Delete project |
 | GET | `/api/projects/:projectSlug/assets/:cardSlug/:filename` | Serve image/file |
 
 ## Database
@@ -84,7 +90,7 @@ The server includes a persistence layer using **Knex.js + SQLite**:
 
 - **Project** (`src/db/models/project.ts`) - CRUD: `createProject`, `getProjectById`, `getProjectByPath`, `listProjects`, `updateProject`, `deleteProject`
 - **Card** (`src/db/models/card.ts`) - CRUD: `createCard`, `getCardById`, `getCardByPath`, `listCards`, `updateCard`, `deleteCard`
-- **Comment** (`src/db/models/comment.ts`) - CRUD: `createComment`, `getCommentsByCardId`
+- **Comment** (`src/db/models/comment.ts`) - CRUD: `createComment`, `getCommentsByCardId`, `deleteComment`
 
 ### Database Location
 
@@ -197,8 +203,7 @@ npm run test:watch
 # Run tests with coverage
 npm run test:coverage
 
-# Run E2E tests (requires running server)
-npm run start &
+# Run E2E tests (Playwright starts the server automatically)
 npx playwright test
 ```
 
@@ -252,8 +257,7 @@ issue-tracker-mcp/
 │   │   ├── router.ts         # Vue Router
 │   │   ├── api/client.ts     # Axios API client
 │   │   ├── stores/           # Pinia stores (projects, cards, UI)
-│   │   ├── types/            # TypeScript types
-│   │   ├── views/            # Page components
+│   │   ├── views/            # Page components (shared types come from @shared)
 │   │   └── components/       # Reusable components
 │   │       ├── MarkdownRenderer/  # Advanced markdown (Shiki, Mermaid, tasks)
 │   │       └── ...
@@ -276,12 +280,19 @@ issue-tracker-mcp/
 
 The project includes comprehensive automated tests using **Jest** with **ts-jest**:
 
-- **164 unit/integration tests** covering all models, tools, and services
-- **7 E2E tests** (Playwright) covering critical user flows:
+- **183 unit/integration tests** covering all models, tools, and services
+- **14 E2E tests** (Playwright) covering critical user flows:
   - Create project → create card → add comment
+  - Comment Markdown rendering (bold, inline code)
   - Markdown rendering: code blocks with syntax highlighting
+  - Markdown rendering: code blocks with horizontal scrolling for long lines
+  - Markdown rendering: Vue and unknown code languages
+  - Markdown rendering: Mermaid diagrams
+  - Markdown rendering: task lists (checked/unchecked)
   - Card status updates (todo → in_progress → done)
-  - Delete card (not implemented in UI)
+  - Delete comment
+  - Delete card
+  - Delete project
   - Image asset serving
   - Navigation (back to projects list)
   - Project card counts update

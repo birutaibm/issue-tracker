@@ -135,3 +135,22 @@ export function getCardAssetsDir(cardPath: string): string {
 export function getAssetPath(projectSlug: string, cardSlug: string, filename: string): string {
   return join('projects', projectSlug, 'cards', cardSlug, filename);
 }
+
+export async function removeFile(filePath: string): Promise<void> {
+  const fullPath = validatePath(filePath);
+  await fs.rm(fullPath, { force: true });
+}
+
+export async function removeDirectory(dirPath: string): Promise<void> {
+  const fullPath = validatePath(dirPath);
+  await fs.rm(fullPath, { recursive: true, force: true });
+}
+
+export async function removeCardFiles(cardPath: string): Promise<void> {
+  await removeFile(cardPath);
+  await removeDirectory(getCardAssetsDir(cardPath));
+}
+
+export async function removeProjectFiles(projectPath: string): Promise<void> {
+  await removeDirectory(projectPath);
+}

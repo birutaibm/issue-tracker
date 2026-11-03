@@ -50,6 +50,34 @@ test.describe('Issue Tracker E2E - Critical User Flows', () => {
     await expect(page.locator('text=Comments (1)')).toBeVisible();
   });
 
+  test('comment markdown rendering', async ({ page }) => {
+    const projectTitle = `Comment Markdown Test ${Date.now()}`;
+    await page.click('button:has-text("New Project")');
+    await page.fill('input#title', projectTitle);
+    await page.click('button:has-text("Create")');
+    await expect(page.locator(`text=${projectTitle}`).first()).toBeVisible();
+
+    const projectCard = page.locator('.project-card', { hasText: projectTitle });
+    await projectCard.locator('a:has-text("Open")').first().click();
+    await page.click('button:has-text("New Card")');
+    await page.fill('input#title', 'Comment Card');
+    await page.fill('textarea#content', 'Card description');
+    await page.click('button:has-text("Create")');
+
+    const cardItem = page.locator('.card-item', { hasText: 'Comment Card' });
+    await cardItem.first().click();
+
+    // Add a Markdown comment
+    await page.fill('textarea[placeholder*="comment"]', 'This is **bold** and `code`.');
+    await page.click('button:has-text("Add Comment")');
+
+    const comment = page.locator('.comment-content').first();
+    await expect(comment.locator('strong:has-text("bold")')).toBeVisible();
+    await expect(comment.locator('code:has-text("code")')).toBeVisible();
+    // Raw Markdown markers must not be shown as plain text
+    await expect(comment).not.toContainText('**bold**');
+  });
+
   test('markdown rendering - code blocks with syntax highlighting', async ({ page }) => {
     await page.click('button:has-text("New Project")');
     await page.fill('input#title', 'Markdown Test Code');
@@ -68,6 +96,123 @@ test.describe('Issue Tracker E2E - Critical User Flows', () => {
 
     // Verify code block rendered with syntax highlighting
     await expect(page.locator('pre code')).toContainText('const hello = "world";');
+  });
+
+  test('markdown rendering - code blocks scroll horizontally', async ({ page }) => {
+    const projectTitle = `Code Overflow Test ${Date.now()}`;
+    await page.click('button:has-text("New Project")');
+    await page.fill('input#title', projectTitle);
+    await page.click('button:has-text("Create")');
+    await expect(page.locator(`text=${projectTitle}`).first()).toBeVisible();
+
+    const projectCard = page.locator('.project-card', { hasText: projectTitle });
+    await projectCard.locator('a:has-text("Open")').first().click();
+    await page.click('button:has-text("New Card")');
+    await page.fill('input#title', 'Overflow Card');
+    const longLine = `const value = "${'x'.repeat(300)}";`;
+    await page.fill('textarea#content', '```typescript\n' + longLine + '\n```');
+    await page.click('button:has-text("Create")');
+
+    const cardItem = page.locator('.card-item', { hasText: 'Overflow Card' });
+    await cardItem.first().click();
+
+    // Wait for Shiki to replace the plain code block
+    const pre = page.locator('.markdown-renderer pre.shiki').first();
+    await expect(pre).toBeVisible();
+
+    const metrics = await pre.evaluate((el) => ({
+      overflowX: getComputedStyle(el).overflowX,
+      scrollWidth: el.scrollWidth,
+      clientWidth: el.clientWidth,
+    }));
+
+    expect(metrics.overflowX).toBe('auto');
+    expect(metrics.scrollWidth).toBeGreaterThan(metrics.clientWidth);
+  });
+
+  test('markdown rendering - vue and unknown code languages', async ({ page }) => {
+    const projectTitle = `Code Language Test ${Date.now()}`;
+    await page.click('button:has-text("New Project")');
+    await page.fill('input#title', projectTitle);
+    await page.click('button:has-text("Create")');
+    await expect(page.locator(`text=${projectTitle}`).first()).toBeVisible();
+
+    const projectCard = page.locator('.project-card', { hasText: projectTitle });
+    await projectCard.locator('a:has-text("Open")').first().click();
+    await page.click('button:has-text("New Card")');
+    await page.fill('input#title', 'Vue Language Card');
+    const content = [
+      '```vue',
+      '<template>',
+      '  <div>{{ message }}</div>',
+      '</template>',
+      '```',
+      '',
+      '```not-a-real-language',
+      'plain <text> content',
+      '```',
+    ].join('\n');
+    await page.fill('textarea#content', content);
+    await page.click('button:has-text("Create")');
+
+    const cardItem = page.locator('.card-item', { hasText: 'Vue Language Card' });
+    await cardItem.first().click();
+
+    // Both blocks must be replaced by Shiki, including the unknown language
+    const blocks = page.locator('.markdown-renderer pre.shiki');
+    await expect(blocks).toHaveCount(2);
+
+    // Vue is highlighted with its grammar
+    await expect(blocks.nth(0)).toContainText('<template>');
+    expect(await blocks.nth(0).innerHTML()).toContain('<span style=');
+
+    // Unknown languages fall back to plain text without breaking the page
+    await expect(blocks.nth(1)).toContainText('plain <text> content');
+  });
+
+  test('markdown rendering - mermaid diagrams', async ({ page }) => {
+    const projectTitle = `Mermaid Test ${Date.now()}`;
+    await page.click('button:has-text("New Project")');
+    await page.fill('input#title', projectTitle);
+    await page.click('button:has-text("Create")');
+    await expect(page.locator(`text=${projectTitle}`).first()).toBeVisible();
+
+    const projectCard = page.locator('.project-card', { hasText: projectTitle });
+    await projectCard.locator('a:has-text("Open")').first().click();
+    await page.click('button:has-text("New Card")');
+    await page.fill('input#title', 'Mermaid Card');
+    await page.fill('textarea#content', '```mermaid\ngraph TD\n    A --> B\n```');
+    await page.click('button:has-text("Create")');
+
+    const cardItem = page.locator('.card-item', { hasText: 'Mermaid Card' });
+    await cardItem.first().click();
+
+    // Verify mermaid diagram rendered as SVG
+    await expect(page.locator('.mermaid svg')).toBeVisible();
+  });
+
+  test('markdown rendering - task lists', async ({ page }) => {
+    const projectTitle = `Task List Test Project ${Date.now()}`;
+    await page.click('button:has-text("New Project")');
+    await page.fill('input#title', projectTitle);
+    await page.click('button:has-text("Create")');
+    await expect(page.locator(`text=${projectTitle}`).first()).toBeVisible();
+
+    const projectCard = page.locator('.project-card', { hasText: projectTitle });
+    await projectCard.locator('a:has-text("Open")').first().click();
+    await page.click('button:has-text("New Card")');
+    await page.fill('input#title', 'Task List Card');
+    await page.fill('textarea#content', '- [ ] Todo item\n- [x] Done item');
+    await page.click('button:has-text("Create")');
+
+    const cardItem = page.locator('.card-item', { hasText: 'Task List Card' });
+    await cardItem.first().click();
+
+    // Verify task list rendered with one checkbox per item and correct state
+    const checkboxes = page.locator('.markdown-renderer input[type="checkbox"]');
+    await expect(checkboxes).toHaveCount(2);
+    await expect(checkboxes.nth(0)).not.toBeChecked();
+    await expect(checkboxes.nth(1)).toBeChecked();
   });
 
   test('card status update (todo -> in_progress -> done)', async ({ page }) => {
@@ -95,13 +240,42 @@ test.describe('Issue Tracker E2E - Critical User Flows', () => {
     await expect(page.locator('select')).toHaveValue('done');
   });
 
-  test('delete card - not implemented in UI', async ({ page }) => {
+  test('delete comment', async ({ page }) => {
     await page.click('button:has-text("New Project")');
-    await page.fill('input#title', 'Delete Test Project');
+    await page.fill('input#title', 'Comment Delete Project');
     await page.click('button:has-text("Create")');
-    await expect(page.locator('text=Delete Test Project').first()).toBeVisible();
+    await expect(page.locator('text=Comment Delete Project').first()).toBeVisible();
 
-    const projectCard = page.locator('.project-card', { hasText: 'Delete Test Project' });
+    const projectCard = page.locator('.project-card', { hasText: 'Comment Delete Project' });
+    await projectCard.locator('a:has-text("Open")').first().click();
+    await page.click('button:has-text("New Card")');
+    await page.fill('input#title', 'Card With Comment');
+    await page.fill('textarea#content', 'Card description');
+    await page.click('button:has-text("Create")');
+    await expect(page.locator('text=Card With Comment').first()).toBeVisible();
+
+    const cardItem = page.locator('.card-item', { hasText: 'Card With Comment' });
+    await cardItem.first().click();
+    await expect(page.locator('h2:has-text("Card With Comment")')).toBeVisible();
+
+    await page.fill('textarea[placeholder*="comment"]', 'Comment to delete');
+    await page.click('button:has-text("Add Comment")');
+    await expect(page.locator('text=Comment to delete').first()).toBeVisible();
+
+    await page.evaluate(() => {
+      window.confirm = () => true;
+    });
+    await page.click('button:has-text("Delete")');
+    await expect(page.locator('text=Comment to delete')).not.toBeVisible();
+  });
+
+  test('delete card', async ({ page }) => {
+    await page.click('button:has-text("New Project")');
+    await page.fill('input#title', 'Card Delete Project');
+    await page.click('button:has-text("Create")');
+    await expect(page.locator('text=Card Delete Project').first()).toBeVisible();
+
+    const projectCard = page.locator('.project-card', { hasText: 'Card Delete Project' });
     await projectCard.locator('a:has-text("Open")').first().click();
     await page.click('button:has-text("New Card")');
     await page.fill('input#title', 'Card to Delete');
@@ -109,8 +283,40 @@ test.describe('Issue Tracker E2E - Critical User Flows', () => {
     await page.click('button:has-text("Create")');
     await expect(page.locator('text=Card to Delete').first()).toBeVisible();
 
-    // Verify no delete button exists in card detail view
-    await expect(page.locator('button:has-text("Delete")')).not.toBeVisible();
+    const cardItem = page.locator('.card-item', { hasText: 'Card to Delete' });
+    await cardItem.first().click();
+    await expect(page.locator('h2:has-text("Card to Delete")')).toBeVisible();
+
+    await page.evaluate(() => {
+      window.confirm = () => true;
+    });
+    await page.click('button:has-text("Delete")');
+    await expect(page.locator('h2:has-text("Card to Delete")')).not.toBeVisible();
+    await expect(page.locator('h2')).toContainText('Card Delete Project');
+  });
+
+  test('delete project', async ({ page }) => {
+    await page.click('button:has-text("New Project")');
+    await page.fill('input#title', 'Project to Delete');
+    await page.click('button:has-text("Create")');
+    await expect(page.locator('text=Project to Delete').first()).toBeVisible();
+
+    const projectCard = page.locator('.project-card', { hasText: 'Project to Delete' });
+    await projectCard.locator('a:has-text("Open")').first().click();
+    await page.click('button:has-text("New Card")');
+    await page.fill('input#title', 'Card inside deleted project');
+    await page.fill('textarea#content', 'This card goes away too');
+    await page.click('button:has-text("Create")');
+    await expect(page.locator('text=Card inside deleted project').first()).toBeVisible();
+
+    await page.evaluate(() => {
+      window.confirm = () => true;
+    });
+    await page.click('button:has-text("Delete Project")');
+    await page.waitForURL('/');
+    await expect(page.locator('text=Project to Delete')).not.toBeVisible();
+    await expect(page.locator('text=Card inside deleted project')).not.toBeVisible();
+    await expect(page.locator('h2')).toContainText('Projects');
   });
 
   test('image asset serving', async ({ page }) => {

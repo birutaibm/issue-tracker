@@ -9,6 +9,8 @@ import {
   deleteCard,
 } from '../services/cardService.js';
 import { createProject } from '../services/projectService.js';
+import { createComment } from '../services/commentService.js';
+import { mountCommentPath, readCommentFile } from '../services/FileSystem.js';
 import { setupTestEnvironment, teardownTestEnvironment } from '../__tests__/test-utils.js';
 import {
   setupTestDatabase,
@@ -165,6 +167,17 @@ describe('Card Service', () => {
       expect(updated?.status).toBe('in_progress');
     });
 
+    it('should update card content in the markdown file', async () => {
+      const card = await createCard(projectId, 'Test Card', 'Description');
+      const updated = await updateCard(card.id, { content: '# Updated\n\nNew content' });
+
+      expect(updated).not.toBeNull();
+      expect(updated?.title).toBe('Test Card');
+
+      const cardWithContent = await getCardWithContent(card.id);
+      expect(cardWithContent?.content).toBe('# Updated\n\nNew content');
+    });
+
     it('should return null for non-existent card', async () => {
       const updated = await updateCard(999, { title: 'New Title' });
       expect(updated).toBeNull();
@@ -187,6 +200,32 @@ describe('Card Service', () => {
 
       const found = await getCardById(card.id);
       expect(found).toBeNull();
+    });
+
+    it('should delete comments of the card', async () => {
+      const card = await createCard(projectId, 'Test Card', 'Description');
+      await createComment(card.id, 'Comment 1');
+      await createComment(card.id, 'Comment 2');
+
+      const deleted = await deleteCard(card.id);
+      expect(deleted).toBe(true);
+
+      const comments = await (await import('../services/commentService.js')).listComments(card.id);
+      expect(comments).toHaveLength(0);
+    });
+
+    it('should remove card markdown file and comments directory', async () => {
+      const card = await createCard(projectId, 'Test Card', 'Description');
+      await createComment(card.id, 'Comment 1');
+
+      const comment = (
+        await (await import('../services/commentService.js')).listComments(card.id)
+      )[0];
+      const commentPath = mountCommentPath(card, comment);
+      await expect(readCommentFile(commentPath)).resolves.toBe('Comment 1');
+
+      await deleteCard(card.id);
+      await expect(readCommentFile(commentPath)).rejects.toThrow();
     });
 
     it('should return false for non-existent card', async () => {

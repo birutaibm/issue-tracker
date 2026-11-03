@@ -1,7 +1,11 @@
 import { Request, Response, NextFunction } from 'express';
 
-export function errorHandler(err: Error, req: Request, res: Response, _next: NextFunction) {
+export function errorHandler(err: Error, req: Request, res: Response, next: NextFunction) {
   console.error('Error:', err);
+
+  if (res.headersSent) {
+    return next(err);
+  }
 
   if (err.message.includes('not found')) {
     return res.status(404).json({ error: err.message });

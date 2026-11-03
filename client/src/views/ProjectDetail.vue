@@ -36,6 +36,23 @@ function handleCreateCard() {
 function handleCardClick(cardId: number) {
   router.push(`/projects/${projectId}/cards/${cardId}`);
 }
+
+async function handleDeleteProject() {
+  const project = projectsStore.currentProject;
+  if (!project) return;
+
+  const confirmed = window.confirm(
+    `Delete project "${project.title}" and all of its cards? This cannot be undone.`
+  );
+  if (!confirmed) return;
+
+  try {
+    await projectsStore.deleteProject(project.id);
+    router.push('/');
+  } catch (err) {
+    console.error('Failed to delete project:', err);
+  }
+}
 </script>
 
 <template>
@@ -44,6 +61,7 @@ function handleCardClick(cardId: number) {
       <router-link to="/" class="back-link">← Back to Projects</router-link>
       <div class="header-actions">
         <h2>{{ projectsStore.currentProject.title }}</h2>
+        <button class="btn btn-danger" @click="handleDeleteProject">Delete Project</button>
         <button class="btn btn-primary" @click="handleCreateCard">+ New Card</button>
       </div>
     </div>
@@ -172,5 +190,14 @@ function handleCardClick(cardId: number) {
 
 .btn-primary:hover {
   background: #36a070;
+}
+
+.btn-danger {
+  background: #d32f2f;
+  color: white;
+}
+
+.btn-danger:hover {
+  background: #b71c1c;
 }
 </style>

@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach, afterAll } from '@jest/globals';
-import { listComments, createComment } from '../services/commentService.js';
+import { listComments, createComment, deleteComment } from '../services/commentService.js';
 import { createProject } from '../services/projectService.js';
-import { createCard } from '../services/cardService.js';
+import { createCard, getCardById } from '../services/cardService.js';
+import { mountCommentPath, readCommentFile } from '../services/FileSystem.js';
 import { setupTestEnvironment, teardownTestEnvironment } from '../__tests__/test-utils.js';
 import {
   setupTestDatabase,
@@ -91,6 +92,28 @@ describe('Comment Service', () => {
       const comments = await listComments(cardId);
       expect(comments).toHaveLength(1);
       expect(comments[0].content).toBe('Test comment content');
+    });
+  });
+
+  describe('deleteComment', () => {
+    it('should delete comment and its markdown file', async () => {
+      const comment = await createComment(cardId, 'Comment to delete');
+      const commentId = comment.id;
+
+      const deleted = await deleteComment(commentId, cardId);
+      expect(deleted).toBe(true);
+
+      const comments = await listComments(cardId);
+      expect(comments).toHaveLength(0);
+
+      const card = await getCardById(cardId);
+      const commentPath = mountCommentPath(card!, { ...comment, id: commentId });
+      await expect(readCommentFile(commentPath)).rejects.toThrow();
+    });
+
+    it('should return false for non-existent comment', async () => {
+      const deleted = await deleteComment(999, cardId);
+      expect(deleted).toBe(false);
     });
   });
 });

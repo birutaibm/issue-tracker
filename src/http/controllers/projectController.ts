@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+import { asyncHandler } from '../middleware/asyncHandler.js';
 import {
   listProjects,
   createProject,
@@ -7,30 +7,30 @@ import {
   deleteProject,
 } from '../../services/projectService.js';
 
-export async function list(req: Request, res: Response) {
+export const list = asyncHandler(async (_req, res) => {
   const projects = await listProjects();
   res.json(projects);
-}
+});
 
-export async function create(req: Request, res: Response) {
+export const create = asyncHandler(async (req, res) => {
   const { title } = req.body;
   if (!title) {
     return res.status(400).json({ error: 'Title is required' });
   }
   const project = await createProject(title);
   res.status(201).json(project);
-}
+});
 
-export async function getById(req: Request, res: Response) {
+export const getById = asyncHandler(async (req, res) => {
   const id = Number(req.params.id);
   const project = await getProjectWithCards(id);
   if (!project) {
     return res.status(404).json({ error: 'Project not found' });
   }
   res.json(project);
-}
+});
 
-export async function update(req: Request, res: Response) {
+export const update = asyncHandler(async (req, res) => {
   const id = Number(req.params.id);
   const { title } = req.body;
   if (!title) {
@@ -41,13 +41,13 @@ export async function update(req: Request, res: Response) {
     return res.status(404).json({ error: 'Project not found' });
   }
   res.json(project);
-}
+});
 
-export async function remove(req: Request, res: Response) {
+export const remove = asyncHandler(async (req, res) => {
   const id = Number(req.params.id);
   const deleted = await deleteProject(id);
   if (!deleted) {
     return res.status(404).json({ error: 'Project not found' });
   }
   res.status(204).send();
-}
+});

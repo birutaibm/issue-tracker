@@ -1,15 +1,30 @@
 import { promises as fs } from 'fs';
-import { join } from 'path';
+import { isAbsolute, join, relative, resolve, sep } from 'path';
 import { getProjectByPath } from '../db/models/project.js';
 import { getCardByPath } from '../db/models/card.js';
-import { validatePath } from './FileSystem.js';
+import { getBaseDir } from './FileSystem.js';
 import { lookup } from 'mime-types';
 
-export async function getAssetPath(
-  projectSlug: string,
-  cardSlug: string,
-  filename: string
-): Promise<string | null> {
+interface CardContext {
+  projectPath: string;
+  cardSlug: string;
+}
+
+function getCardAssetsDir(projectPath: string, cardSlug: string): string {
+  return resolve(getBaseDir(), projectPath, 'cards', cardSlug);
+}
+
+function isInsideDirectory(directory: string, target: string): boolean {
+  const relativePath = relative(directory, target);
+  return (
+    relativePath !== '' &&
+    relativePath !== '..' &&
+    !relativePath.startsWith(`..${sep}`) &&
+    !isAbsolute(relativePath)
+  );
+}
+
+async function findCardContext(projectSlug: string, cardSlug: string): Promise<CardContext | null> {
   const project = await getProjectByPath(`projects/${projectSlug}`);
   if (!project) return null;
 
@@ -17,7 +32,23 @@ export async function getAssetPath(
   const card = await getCardByPath(cardPath);
   if (!card) return null;
 
-  const assetPath = join(project.path, 'cards', cardSlug, filename);
+  return { projectPath: project.path, cardSlug };
+}
+
+export async function getAssetPath(
+  projectSlug: string,
+  cardSlug: string,
+  filename: string
+): Promise<string | null> {
+  const context = await findCardContext(projectSlug, cardSlug);
+  if (!context) return null;
+
+  const assetPath = join(context.projectPath, 'cards', context.cardSlug, filename);
+  const assetsDir = getCardAssetsDir(context.projectPath, context.cardSlug);
+  const fullPath = resolve(getBaseDir(), assetPath);
+
+  if (!isInsideDirectory(assetsDir, fullPath)) return null;
+
   return assetPath;
 }
 
@@ -26,21 +57,29 @@ export async function serveAsset(
   cardSlug: string,
   filename: string
 ): Promise<{ path: string; mimeType: string } | null> {
-  const project = await getProjectByPath(`projects/${projectSlug}`);
-  if (!project) return null;
+  const context = await findCardContext(projectSlug, cardSlug);
+  if (!context) return null;
 
-  const cardPath = join(project.path, 'cards', `${cardSlug}.md`);
-  const card = await getCardByPath(cardPath);
-  if (!card) return null;
+  const assetsDir = getCardAssetsDir(context.projectPath, context.cardSlug);
+  const requestedPath = resolve(assetsDir, filename);
 
-  const assetPath = join(project.path, 'cards', cardSlug, filename);
+  // Reject paths that escape the card asset directory (e.g. ../../secret.txt).
+  if (!isInsideDirectory(assetsDir, requestedPath)) return null;
 
   try {
-    const fullPath = validatePath(assetPath);
-    await fs.access(fullPath);
+    // Resolve symlinks so a link inside the card directory cannot point outside it.
+    const [realAssetsDir, realPath] = await Promise.all([
+      fs.realpath(assetsDir),
+      fs.realpath(requestedPath),
+    ]);
 
-    const mimeType = lookup(fullPath) || 'application/octet-stream';
-    return { path: fullPath, mimeType };
+    if (!isInsideDirectory(realAssetsDir, realPath)) return null;
+
+    const stats = await fs.stat(realPath);
+    if (!stats.isFile()) return null;
+
+    const mimeType = lookup(realPath) || 'application/octet-stream';
+    return { path: realPath, mimeType };
   } catch {
     return null;
   }

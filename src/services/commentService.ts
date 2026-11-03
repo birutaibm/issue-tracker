@@ -1,5 +1,5 @@
 import { getKnex } from '../db/client.js';
-import { readCommentFile, writeCommentFile, mountCommentPath } from './FileSystem.js';
+import { readCommentFile, writeCommentFile, mountCommentPath, removeFile } from './FileSystem.js';
 import type { Card as DbCard } from '../db/models/card.js';
 import type { CommentWithContent } from '../shared/types.js';
 
@@ -42,4 +42,22 @@ export async function createComment(cardId: number, content: string): Promise<Co
   await writeCommentFile(card.path, comment.id, content);
 
   return { ...comment, content };
+}
+
+export async function deleteComment(id: number, cardId?: number): Promise<boolean> {
+  const knex = getKnex();
+  const query = knex('comments').where({ id });
+  if (cardId !== undefined) {
+    query.andWhere({ card_id: cardId });
+  }
+  const comment = await query.first();
+  if (!comment) return false;
+
+  const card = (await knex('cards').where({ id: comment.card_id }).first()) as DbCard | undefined;
+  if (card) {
+    await removeFile(mountCommentPath(card, comment));
+  }
+
+  const deleted = await knex('comments').where({ id }).delete();
+  return deleted > 0;
 }
