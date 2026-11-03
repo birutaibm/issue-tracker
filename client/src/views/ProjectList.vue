@@ -14,6 +14,19 @@ onMounted(() => {
 function handleCreateProject() {
   uiStore.openModal('createProject');
 }
+
+async function handleDeleteProject(project: { id: number; title: string }) {
+  const confirmed = window.confirm(
+    `Delete project "${project.title}" and all of its cards? This cannot be undone.`
+  );
+  if (!confirmed) return;
+
+  try {
+    await projectsStore.deleteProject(project.id);
+  } catch (err) {
+    console.error('Failed to delete project:', err);
+  }
+}
 </script>
 
 <template>
@@ -34,7 +47,12 @@ function handleCreateProject() {
           >
           <span class="count done">✅ {{ project.cardCounts?.done || 0 }} done</span>
         </div>
-        <router-link :to="`/projects/${project.id}`" class="btn btn-secondary"> Open </router-link>
+        <div class="project-actions">
+          <router-link :to="`/projects/${project.id}`" class="btn btn-secondary">
+            Open
+          </router-link>
+          <button class="btn btn-danger" @click="handleDeleteProject(project)">Delete</button>
+        </div>
       </div>
     </div>
 
@@ -165,5 +183,19 @@ function handleCreateProject() {
 
 .btn-secondary:hover {
   background: #d0d0d0;
+}
+
+.btn-danger {
+  background: #d32f2f;
+  color: white;
+}
+
+.btn-danger:hover {
+  background: #b71c1c;
+}
+
+.project-actions {
+  display: flex;
+  gap: 0.5rem;
 }
 </style>

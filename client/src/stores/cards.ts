@@ -93,6 +93,20 @@ export const useCardsStore = defineStore('cards', () => {
     }
   }
 
+  async function deleteComment(cardId: number, commentId: number) {
+    error.value = null;
+    try {
+      await api.delete(`/cards/${cardId}/comments/${commentId}`);
+      if (currentCard.value?.id === cardId) {
+        currentCard.value.comments = currentCard.value.comments.filter((c) => c.id !== commentId);
+      }
+    } catch (err) {
+      error.value = 'Failed to delete comment';
+      console.error(err);
+      throw err;
+    }
+  }
+
   function clearCurrentCard() {
     currentCard.value = null;
   }
@@ -115,6 +129,7 @@ export const useCardsStore = defineStore('cards', () => {
     createCard,
     updateCard,
     deleteCard,
+    deleteComment,
     clearCurrentCard,
   };
 });

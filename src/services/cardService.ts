@@ -112,15 +112,50 @@ export async function getCardWithContent(id: number): Promise<CardWithContent | 
 
 export async function updateCard(id: number, input: UpdateCardInput): Promise<DbCard | null> {
   const knex = getKnex();
-  if (Object.keys(input).length === 0) {
+  const { content, ...dbInput } = input;
+  const dbUpdate = Object.fromEntries(
+    Object.entries(dbInput).filter(([, value]) => value !== undefined)
+  );
+
+  if (content === undefined && Object.keys(dbUpdate).length === 0) {
     return getCardById(id);
   }
-  const [card] = await knex('cards').where({ id }).update(input).returning('*');
-  return card || null;
+
+  const existing = await getCardById(id);
+  if (!existing) return null;
+
+  const { writeCardFile } = await import('../services/FileSystem.js');
+
+  await knex.transaction(async (trx) => {
+    // Atualiza o banco primeiro (título/status) para manter os metadados consistentes.
+    if (Object.keys(dbUpdate).length > 0) {
+      const [updated] = await trx('cards').where({ id }).update(dbUpdate).returning('*');
+      if (updated) {
+        Object.assign(existing, updated);
+      }
+    }
+
+    // Escreve o arquivo markdown dentro da transação. Se falhar, faz rollback de tudo.
+    if (content !== undefined) {
+      await writeCardFile(existing.path, content);
+    }
+  });
+
+  return existing || null;
 }
 
 export async function deleteCard(id: number): Promise<boolean> {
   const knex = getKnex();
-  const deleted = await knex('cards').where({ id }).delete();
-  return deleted > 0;
+  const card = await knex('cards').where({ id }).first();
+  if (!card) return false;
+
+  const { removeCardFiles } = await import('../services/FileSystem.js');
+
+  await knex.transaction(async (trx) => {
+    await trx('comments').where({ card_id: id }).delete();
+    await trx('cards').where({ id }).delete();
+    await removeCardFiles(card.path);
+  });
+
+  return true;
 }

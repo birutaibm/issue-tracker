@@ -7,12 +7,20 @@ import {
   updateProject,
   deleteProject,
 } from '../services/projectService.js';
-import { setupTestEnvironment, teardownTestEnvironment } from '../__tests__/test-utils.js';
+import { createCard } from '../services/cardService.js';
+import { createComment } from '../services/commentService.js';
+import {
+  TEST_BASE_DIR,
+  setupTestEnvironment,
+  teardownTestEnvironment,
+} from '../__tests__/test-utils.js';
 import {
   setupTestDatabase,
   teardownTestDatabase,
   truncateTestTables,
 } from '../__tests__/test-db.js';
+import { resolve } from 'path';
+import { access } from 'fs/promises';
 
 describe('Project Service', () => {
   beforeAll(async () => {
@@ -150,6 +158,34 @@ describe('Project Service', () => {
 
       const found = await getProjectById(project.id);
       expect(found).toBeNull();
+    });
+
+    it('should delete cards and comments of the project', async () => {
+      const project = await createProject('Test Project');
+      const card = await createCard(project.id, 'Test Card', 'Description');
+      await createComment(card.id, 'Comment 1');
+
+      const deleted = await deleteProject(project.id);
+      expect(deleted).toBe(true);
+
+      const comments = await (await import('../services/commentService.js')).listComments(card.id);
+      expect(comments).toHaveLength(0);
+
+      const cards = await (await import('../services/cardService.js')).listCards(project.id);
+      expect(cards).toHaveLength(0);
+    });
+
+    it('should remove project directory', async () => {
+      const project = await createProject('Test Project');
+      const card = await createCard(project.id, 'Test Card', 'Description');
+      await createComment(card.id, 'Comment 1');
+
+      const projectPath = project.path;
+      const fullPath = resolve(TEST_BASE_DIR, projectPath);
+      await expect(access(fullPath)).resolves.not.toThrow();
+
+      await deleteProject(project.id);
+      await expect(access(fullPath)).rejects.toThrow();
     });
 
     it('should return false for non-existent project', async () => {

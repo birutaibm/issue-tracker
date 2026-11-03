@@ -1,50 +1,43 @@
-let initialized = false;
+import type { Mermaid } from 'mermaid';
 
-export function initMermaid(): Promise<void> {
-  if (!initialized) {
-    return import('mermaid').then((mermaid) => {
-      mermaid.initialize({
-        startOnLoad: false,
-        theme: 'default',
-        securityLevel: 'loose',
-        fontFamily: 'inherit',
-      });
-      initialized = true;
-    });
+let initialized = false;
+let mermaidApi: Mermaid | null = null;
+
+async function getMermaid(): Promise<Mermaid> {
+  if (!mermaidApi) {
+    mermaidApi = (await import('mermaid')).default;
   }
-  return Promise.resolve();
+  return mermaidApi;
+}
+
+export async function initMermaid(): Promise<void> {
+  if (initialized) return;
+
+  const mermaid = await getMermaid();
+  mermaid.initialize({
+    startOnLoad: false,
+    theme: 'default',
+    securityLevel: 'loose',
+    fontFamily: 'inherit',
+  });
+  initialized = true;
 }
 
 export async function renderMermaid(container: HTMLElement): Promise<void> {
+  // Elements are marked with `data-processed` by mermaid itself, so only select
+  // the ones that have not been rendered yet.
+  const elements = Array.from(
+    container.querySelectorAll<HTMLElement>('.mermaid:not([data-processed])')
+  );
+
+  if (elements.length === 0) return;
+
   await initMermaid();
-  const mermaid = (await import('mermaid')).default;
-  const elements = container.querySelectorAll('.mermaid:not([data-processed])');
-  console.log('[renderMermaid] Mermaid elements found:', elements.length);
+  const mermaid = await getMermaid();
 
-  for (const el of elements) {
-    el.setAttribute('data-processed', 'true');
-  }
-
-  if (elements.length > 0) {
-    try {
-      // Ensure elements are visible and have content
-      for (const el of elements) {
-        el.style.display = 'block';
-        el.style.visibility = 'visible';
-        // Ensure the element has the mermaid content
-        if (!el.textContent || el.textContent.trim() === '') {
-          console.log('[renderMermaid] Empty mermaid element, skipping');
-          continue;
-        }
-      }
-
-      // Wait for DOM to settle
-      await new Promise((r) => setTimeout(r, 200));
-
-      await mermaid.run({ nodes: Array.from(elements) });
-      console.log('[renderMermaid] Mermaid rendering completed');
-    } catch (err) {
-      console.error('Mermaid rendering failed:', err);
-    }
+  try {
+    await mermaid.run({ nodes: elements });
+  } catch (err) {
+    console.error('Mermaid rendering failed:', err);
   }
 }

@@ -8,7 +8,7 @@ import {
   teardownTestDatabase,
   truncateTestTables,
 } from '../__tests__/test-db.js';
-import { writeFile, mkdir } from 'fs/promises';
+import { writeFile, mkdir, symlink } from 'fs/promises';
 import { join } from 'path';
 
 describe('Asset Service', () => {
@@ -56,6 +56,11 @@ describe('Asset Service', () => {
       const path = await getAssetPath(projectSlug, 'non-existent', 'test.png');
       expect(path).toBeNull();
     });
+
+    it('should return null for paths outside the card assets directory', async () => {
+      const path = await getAssetPath(projectSlug, cardSlug, '../../../../secret.txt');
+      expect(path).toBeNull();
+    });
   });
 
   describe('serveAsset', () => {
@@ -78,6 +83,37 @@ describe('Asset Service', () => {
 
     it('should return null for non-existent file', async () => {
       const result = await serveAsset(projectSlug, cardSlug, 'non-existent.png');
+      expect(result).toBeNull();
+    });
+
+    it('should return null for paths outside the card assets directory', async () => {
+      const secretPath = join(process.env.HOME || '', 'secret.txt');
+      await writeFile(secretPath, 'top secret');
+
+      const result = await serveAsset(projectSlug, cardSlug, '../../../../secret.txt');
+      expect(result).toBeNull();
+    });
+
+    it('should return null for absolute paths outside the card assets directory', async () => {
+      const result = await serveAsset(projectSlug, cardSlug, '/etc/passwd');
+      expect(result).toBeNull();
+    });
+
+    it('should return null for symlinks that escape the card assets directory', async () => {
+      const secretPath = join(process.env.HOME || '', 'outside-secret.txt');
+      await writeFile(secretPath, 'top secret');
+
+      const linkPath = join(
+        process.env.HOME || '',
+        'projects',
+        projectSlug,
+        'cards',
+        cardSlug,
+        'outside-link.txt'
+      );
+      await symlink(secretPath, linkPath);
+
+      const result = await serveAsset(projectSlug, cardSlug, 'outside-link.txt');
       expect(result).toBeNull();
     });
 
