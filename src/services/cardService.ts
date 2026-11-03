@@ -124,17 +124,24 @@ export async function updateCard(id: number, input: UpdateCardInput): Promise<Db
   const existing = await getCardById(id);
   if (!existing) return null;
 
-  if (content !== undefined) {
-    const { writeCardFile } = await import('../services/FileSystem.js');
-    await writeCardFile(existing.path, content);
-  }
+  const { writeCardFile } = await import('../services/FileSystem.js');
 
-  if (Object.keys(dbUpdate).length === 0) {
-    return existing;
-  }
+  await knex.transaction(async (trx) => {
+    // Atualiza o banco primeiro (título/status) para manter os metadados consistentes.
+    if (Object.keys(dbUpdate).length > 0) {
+      const [updated] = await trx('cards').where({ id }).update(dbUpdate).returning('*');
+      if (updated) {
+        Object.assign(existing, updated);
+      }
+    }
 
-  const [card] = await knex('cards').where({ id }).update(dbUpdate).returning('*');
-  return card || null;
+    // Escreve o arquivo markdown dentro da transação. Se falhar, faz rollback de tudo.
+    if (content !== undefined) {
+      await writeCardFile(existing.path, content);
+    }
+  });
+
+  return existing || null;
 }
 
 export async function deleteCard(id: number): Promise<boolean> {
@@ -142,13 +149,13 @@ export async function deleteCard(id: number): Promise<boolean> {
   const card = await knex('cards').where({ id }).first();
   if (!card) return false;
 
+  const { removeCardFiles } = await import('../services/FileSystem.js');
+
   await knex.transaction(async (trx) => {
     await trx('comments').where({ card_id: id }).delete();
     await trx('cards').where({ id }).delete();
+    await removeCardFiles(card.path);
   });
-
-  const { removeCardFiles } = await import('../services/FileSystem.js');
-  await removeCardFiles(card.path);
 
   return true;
 }
