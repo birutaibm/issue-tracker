@@ -4,6 +4,7 @@ import { fileURLToPath } from 'url';
 import { requestLogger, errorHandler } from './middleware/errorHandler.js';
 import router from './router.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
+import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -34,7 +35,7 @@ export function createExpressApp(mcpTransport: StreamableHTTPServerTransport) {
     console.error('[MCP] Transport error stack:', error.stack);
   };
 
-  // MCP endpoint - stateless Streamable HTTP transport with session cookie support
+  // MCP endpoint - stateful Streamable HTTP transport with session cookie support
   app.post('/mcp', (req, res) => {
     console.error('[MCP] POST /mcp request received', {
       headers: req.headers,
@@ -53,21 +54,57 @@ export function createExpressApp(mcpTransport: StreamableHTTPServerTransport) {
       console.error('[MCP] Using session ID from cookie:', cookies[SESSION_COOKIE_NAME]);
     }
 
-    try {
-      // Capture session ID from response headers via setHeader
-      const originalSetHeader = res.setHeader.bind(res);
-      res.setHeader = (name: string, value: string | number | readonly string[]) => {
-        if (name.toLowerCase() === 'mcp-session-id') {
-          const sessionId = Array.isArray(value) ? value[0] : value;
-          res.setHeader(
-            'Set-Cookie',
-            `${SESSION_COOKIE_NAME}=${sessionId}; Path=/mcp; HttpOnly; SameSite=Lax`
-          );
-          console.error('[MCP] Set session cookie:', sessionId);
-        }
-        return originalSetHeader(name, value);
-      };
+    // Capture session ID from response headers via setHeader so it can be
+    // forwarded to the client as a session cookie.
+    const originalSetHeader = res.setHeader.bind(res);
+    res.setHeader = (name: string, value: string | number | readonly string[]) => {
+      if (name.toLowerCase() === 'mcp-session-id') {
+        const sessionId = Array.isArray(value) ? value[0] : value;
+        res.setHeader(
+          'Set-Cookie',
+          `${SESSION_COOKIE_NAME}=${sessionId}; Path=/mcp; HttpOnly; SameSite=Lax`
+        );
+        console.error('[MCP] Set session cookie:', sessionId);
+      }
+      return originalSetHeader(name, value);
+    };
 
+    // In stateful mode the transport can only be initialized once. When a
+    // client re-sends `initialize` (e.g. on a new connection without a
+    // persisted session cookie) the SDK rejects it with "Server already
+    // initialized". Instead of erroring, resume the existing session so the
+    // client can continue.
+    if (
+      mcpTransport.sessionId !== undefined &&
+      req.body &&
+      typeof req.body === 'object' &&
+      !Array.isArray(req.body) &&
+      isInitializeRequest(req.body)
+    ) {
+      console.error(
+        '[MCP] Re-initialization requested; resuming existing session:',
+        mcpTransport.sessionId
+      );
+      res.setHeader('mcp-session-id', mcpTransport.sessionId);
+      res.status(200).json({
+        jsonrpc: '2.0',
+        id: (req.body as { id?: unknown }).id ?? null,
+        result: {
+          protocolVersion: '2025-11-25',
+          capabilities: {
+            tools: {},
+            resources: {},
+          },
+          serverInfo: {
+            name: 'issue-tracker-mcp',
+            version: '1.0.0',
+          },
+        },
+      });
+      return;
+    }
+
+    try {
       mcpTransport.handleRequest(req, res, req.body);
     } catch (error) {
       console.error('[MCP] POST /mcp handler error:', error);
